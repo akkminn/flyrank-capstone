@@ -1,59 +1,75 @@
-# FlyRank Capstone — Assignment 1
+# React + TypeScript + Vite
 
-A hands-on assignment completed as part of the **FlyRank AI Frontend Internship** program. This project focuses on setting up a professional development environment and integrating an AI-assisted toolchain using Claude Code.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## Overview
+Currently, two official plugins are available:
 
-This assignment covers the foundational setup that underpins all future work in the internship:
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
 
-- Configuring a local development environment from scratch
-- Initializing and managing a Git repository with proper conventions
-- Integrating Claude Code as an AI-assisted development tool
-- Establishing project structure and documentation standards
+## React Compiler
 
-## Toolchain
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
 
-| Tool | Purpose |
-|------|---------|
-| Git | Version control and commit hygiene |
-| Claude Code | AI-assisted development (Anthropic CLI) |
-| VS Code | Primary code editor |
-| PowerShell | Shell environment on Windows |
+## Expanding the ESLint configuration
 
-## Getting Started
+If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
 
-### Prerequisites
+```js
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
 
-- [Git](https://git-scm.com/)
-- [Node.js](https://nodejs.org/) (for future assignments)
-- [Claude Code](https://claude.ai/code) CLI
+      // Remove tseslint.configs.recommended and replace with this
+      tseslint.configs.recommendedTypeChecked,
+      // Alternatively, use this for stricter rules
+      tseslint.configs.strictTypeChecked,
+      // Optionally, add this for stylistic rules
+      tseslint.configs.stylisticTypeChecked,
 
-### Setup
+      // Other configs...
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
-```bash
-# Clone the repository
-git clone https://github.com/your-username/flyrank-capstone.git
-cd flyrank-capstone/assignment_1
-
-# (Optional) Install Claude Code globally
-npm install -g @anthropic-ai/claude-code
 ```
 
-## Project Structure
+You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+
+```js
+// eslint.config.js
+import reactX from 'eslint-plugin-react-x'
+import reactDom from 'eslint-plugin-react-dom'
+
+export default defineConfig([
+  globalIgnores(['dist']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [
+      // Other configs...
+      // Enable lint rules for React
+      reactX.configs['recommended-typescript'],
+      // Enable lint rules for React DOM
+      reactDom.configs.recommended,
+    ],
+    languageOptions: {
+      parserOptions: {
+        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
+      // other options...
+    },
+  },
+])
 
 ```
-assignment_1/
-├── README.md       # Project documentation
-├── LICENSE         # MIT License
-└── CLAUDE.md       # Claude Code project context
-```
-
-## Key Learnings
-
-- Proper Git workflow: branching, commit messages, and history hygiene
-- AI toolchain integration in a real-world internship context
-- Documentation-first development practices
-
-## License
-
-MIT © 2026 Aung Ko Ko Minn
