@@ -63,6 +63,5 @@ flyrank-capstone/
 
 - Verify changes against `npm run lint` and `npm run build` before considering
   them done; there are no tests to rely on yet.
-- Feature experiments live on separate branches (for example the settings-form
-  work). Confirm the intended branch before committing.
+- Feature experiments live on separate branches. Confirm the intended branch before committing.
 - Leave staging and committing to the user unless explicitly asked.
