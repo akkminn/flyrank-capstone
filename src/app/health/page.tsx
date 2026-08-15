@@ -1,3 +1,5 @@
+import { PageContainer } from "@/components/page-container";
+
 type HealthResponse = {
     status: string;
     service: string;
@@ -16,19 +18,25 @@ export default async function HealthPage() {
     const health = await getHealth();
 
     return (
-        <main>
-            <h1>System Health</h1>
+        <PageContainer>
+            <h1 className="text-3xl font-bold tracking-tight">System Health</h1>
 
-            <dl>
-                <dt>Status</dt>
-                <dd>{health.status}</dd>
+            <dl className="mt-6 space-y-4">
+                <div>
+                    <dt className="text-sm text-slate-400">Status</dt>
+                    <dd className="text-lg text-slate-300">{health.status}</dd>
+                </div>
 
-                <dt>Service</dt>
-                <dd>{health.service}</dd>
+                <div>
+                    <dt className="text-sm text-slate-400">Service</dt>
+                    <dd className="text-lg text-slate-300">{health.service}</dd>
+                </div>
 
-                <dt>Checked at</dt>
-                <dd>{health.timestamp}</dd>
+                <div>
+                    <dt className="text-sm text-slate-400">Checked at</dt>
+                    <dd className="text-lg text-slate-300">{health.timestamp}</dd>
+                </div>
             </dl>
-        </main>
+        </PageContainer>
     );
 }
