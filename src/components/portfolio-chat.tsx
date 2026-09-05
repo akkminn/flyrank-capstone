@@ -7,6 +7,8 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon, Cancel01Icon, MessageQuestionIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
+import { ProjectsToolPart } from "@/components/projects-tool-part";
+import type { PortfolioUIMessage } from "@/lib/ai/tools";
 import { cn } from "@/lib/utils";
 
 const SCROLLBAR_CLASS =
@@ -17,7 +19,7 @@ const SCROLLBAR_CLASS =
 export function PortfolioChat() {
     const [isOpen, setIsOpen] = useState(false);
     const [input, setInput] = useState("");
-    const { messages, sendMessage, status, stop, error } = useChat({
+    const { messages, sendMessage, status, stop, error } = useChat<PortfolioUIMessage>({
         transport: new DefaultChatTransport({ api: "/api/portfolio-chat" }),
     });
 
@@ -123,27 +125,45 @@ export function PortfolioChat() {
                         )}
 
                         {messages.map((message) => (
-                            <div
-                                key={message.id}
-                                className={cn(
-                                    "flex",
-                                    message.role === "user" ? "justify-end" : "justify-start"
-                                )}
-                            >
-                                <div
-                                    className={cn(
-                                        "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word",
-                                        message.role === "user"
-                                            ? "bg-white text-slate-900"
-                                            : "bg-slate-800 text-slate-100"
-                                    )}
-                                >
-                                    {message.parts.map((part, index) =>
-                                        part.type === "text" ? (
-                                            <span key={index}>{part.text}</span>
-                                        ) : null
-                                    )}
-                                </div>
+                            <div key={message.id} className="flex flex-col gap-2">
+                                {message.parts.map((part, index) => {
+                                    if (part.type === "text") {
+                                        return (
+                                            <div
+                                                key={index}
+                                                className={cn(
+                                                    "flex",
+                                                    message.role === "user"
+                                                        ? "justify-end"
+                                                        : "justify-start"
+                                                )}
+                                            >
+                                                <div
+                                                    className={cn(
+                                                        "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word",
+                                                        message.role === "user"
+                                                            ? "bg-white text-slate-900"
+                                                            : "bg-slate-800 text-slate-100"
+                                                    )}
+                                                >
+                                                    {part.text}
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    if (part.type === "tool-getProjects") {
+                                        return (
+                                            <div key={index} className="flex justify-start">
+                                                <div className="w-full max-w-[85%]">
+                                                    <ProjectsToolPart part={part} />
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+
+                                    return null;
+                                })}
                             </div>
                         ))}
 
