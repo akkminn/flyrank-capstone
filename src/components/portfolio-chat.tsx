@@ -4,15 +4,11 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Cancel01Icon, MessageQuestionIcon } from "@hugeicons/core-free-icons";
+import { Alert01Icon, Cancel01Icon, MessageQuestionIcon } from "@hugeicons/core-free-icons";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-// The browser's default scrollbar is light-colored and clashes with the
-// widget's dark theme, so both scrollable areas (message list, textarea)
-// get a slim custom one instead — Firefox via `scrollbar-*`, WebKit/Chromium
-// via the `[&::-webkit-scrollbar*]` arbitrary variants.
 const SCROLLBAR_CLASS =
     "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb:hover]:bg-white/25";
 
@@ -65,6 +61,12 @@ export function PortfolioChat() {
             event.preventDefault();
             submitMessage();
         }
+    }
+
+    function retryLastMessage() {
+        const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
+        const text = lastUserMessage?.parts.find((part) => part.type === "text")?.text;
+        if (text) sendMessage({ text });
     }
 
     return (
@@ -130,7 +132,7 @@ export function PortfolioChat() {
                             >
                                 <div
                                     className={cn(
-                                        "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap break-words",
+                                        "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word",
                                         message.role === "user"
                                             ? "bg-white text-slate-900"
                                             : "bg-slate-800 text-slate-100"
@@ -159,10 +161,29 @@ export function PortfolioChat() {
                         )}
 
                         {status === "error" && (
-                            <p role="alert" className="text-sm text-red-400">
-                                Something went wrong{error?.message ? `: ${error.message}` : "."}{" "}
-                                Please try again.
-                            </p>
+                            <div
+                                role="alert"
+                                className="flex items-start gap-2.5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3"
+                            >
+                                <HugeiconsIcon
+                                    icon={Alert01Icon}
+                                    size={18}
+                                    className="mt-0.5 shrink-0 text-red-300"
+                                />
+                                <div className="flex flex-col items-start gap-1.5">
+                                    <p className="text-sm leading-relaxed text-red-200">
+                                        {error?.message ??
+                                            "Something went wrong. Please try again."}
+                                    </p>
+                                    <button
+                                        type="button"
+                                        onClick={retryLastMessage}
+                                        className="text-xs font-semibold text-red-100 underline underline-offset-2 hover:text-white"
+                                    >
+                                        Try again
+                                    </button>
+                                </div>
+                            </div>
                         )}
                     </div>
 
@@ -184,7 +205,7 @@ export function PortfolioChat() {
                             placeholder="Ask a question…"
                             aria-label="Ask about Minn"
                             className={cn(
-                                "max-h-24 min-h-9 flex-1 resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-sm text-white break-words placeholder:text-slate-500 focus:outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                                "max-h-24 min-h-9 flex-1 resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-sm text-white wrap-break-word focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                                 SCROLLBAR_CLASS
                             )}
                         />

@@ -1,6 +1,15 @@
 import { google } from "@ai-sdk/google";
 
-export const portfolioChatModel = google("gemini-3.6-flash");
+// Tried in order. Gemini 3.6 Flash is fast and high quality, but the free
+// tier's per-model quota means it can get rate-limited under bursty traffic
+// (a reviewer clicking through quickly, several visitors at once). Falling
+// back to a lite model — a separate quota pool — keeps the widget answering
+// instead of erroring out. The route handler only advances to the next
+// model if the previous one actually fails.
+export const portfolioChatModels = [
+    google("gemini-3.6-flash"),
+    google("gemini-flash-lite-latest"),
+];
 
 const PORTFOLIO_CONTEXT = `
 Name: Aung Ko Ko Minn — goes by Minn.
