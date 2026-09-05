@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Navigation } from "@/components/navigation";
+import { PortfolioChat } from "@/components/portfolio-chat";
 
 export const metadata: Metadata = {
     title: "Aung Ko Ko Minn — Developer Portfolio",
@@ -17,6 +18,7 @@ export default function RootLayout({
         <body className="flex min-h-screen flex-col bg-slate-950 text-white">
         <Navigation />
         <main className="flex-1">{children}</main>
+        <PortfolioChat />
         </body>
         </html>
     );
