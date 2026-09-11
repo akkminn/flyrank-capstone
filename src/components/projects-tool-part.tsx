@@ -50,9 +50,25 @@ export function ProjectsToolPart({ part }: { part: ProjectsToolUIPart }) {
                     ))}
                 </div>
             ) : (
-                <div className="flex items-center gap-2 rounded-2xl border border-white/10 bg-slate-800/60 px-4 py-3 text-sm text-slate-400">
-                    <HugeiconsIcon icon={FolderSearchIcon} size={16} className="shrink-0" />
-                    No matching projects found.
+                <div className="flex items-start gap-2.5 rounded-2xl border border-white/10 bg-slate-800/60 px-4 py-3">
+                    <HugeiconsIcon
+                        icon={FolderSearchIcon}
+                        size={16}
+                        className="mt-0.5 shrink-0 text-slate-400"
+                    />
+                    <div className="flex flex-col items-start gap-1 text-sm">
+                        <p className="text-slate-300">
+                            {part.input?.name
+                                ? `No project named "${part.input.name}".`
+                                : "No matching projects."}
+                        </p>
+                        <Link
+                            href="/projects"
+                            className="font-medium text-slate-300 underline underline-offset-2 hover:text-white"
+                        >
+                            See all projects →
+                        </Link>
+                    </div>
                 </div>
             );
 
