@@ -11,8 +11,31 @@ import { ProjectsToolPart } from "@/components/projects-tool-part";
 import type { PortfolioUIMessage } from "@/lib/ai/tools";
 import { cn } from "@/lib/utils";
 
+const SUGGESTIONS = [
+    "What has Minn built?",
+    "What's Minn working on right now?",
+    "What's this site built with?",
+];
+
 const SCROLLBAR_CLASS =
     "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb:hover]:bg-white/25";
+
+const NETWORK_ERROR_FALLBACK = "Couldn't reach the server. Check your connection and try again.";
+
+// The server-side route always sends a short, clean sentence as the error
+// message (see toFriendlyErrorMessage in the route handler) — but a true
+// network failure never reaches that code at all. If the request fails
+// before getting a response (offline, DNS failure, a proxy/CDN returning an
+// HTML error page instead of our stream), useChat's `error.message` ends up
+// being something like a raw HTML document or a browser-internal string like
+// "Failed to fetch". Never render that directly.
+function getDisplayErrorMessage(error: Error | undefined): string {
+    const message = error?.message?.trim();
+    if (!message || message.length > 200 || /[<>]/.test(message)) {
+        return NETWORK_ERROR_FALLBACK;
+    }
+    return message;
+}
 
 // Floating "Ask about me" widget, mounted once in the root layout so it's
 // available on every route rather than scoped to a single page.
@@ -71,6 +94,12 @@ export function PortfolioChat() {
         if (text) sendMessage({ text });
     }
 
+    function askSuggestion(text: string) {
+        if (isBusy) return;
+        sendMessage({ text });
+        stickToBottomRef.current = true;
+    }
+
     return (
         <>
             <button
@@ -89,7 +118,7 @@ export function PortfolioChat() {
                     id="portfolio-chat-panel"
                     role="dialog"
                     aria-label="Ask about Minn"
-                    className="fixed right-5 bottom-20 z-50 flex h-[70vh] max-h-140 w-95 max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/40"
+                    className="fixed right-5 bottom-20 z-50 flex h-[70dvh] max-h-140 w-95 max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/40"
                 >
                     <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                         <div>
@@ -118,10 +147,23 @@ export function PortfolioChat() {
                         )}
                     >
                         {messages.length === 0 && (
-                            <p className="text-sm text-slate-400">
-                                Ask something like &ldquo;What does Minn work on?&rdquo; or
-                                &ldquo;What&apos;s this site built with?&rdquo;
-                            </p>
+                            <div className="flex flex-col gap-3">
+                                <p className="text-sm text-slate-400">
+                                    Ask me anything about Minn — or try one of these:
+                                </p>
+                                <div className="flex flex-col items-start gap-2">
+                                    {SUGGESTIONS.map((suggestion) => (
+                                        <button
+                                            key={suggestion}
+                                            type="button"
+                                            onClick={() => askSuggestion(suggestion)}
+                                            className="rounded-xl border border-white/10 bg-slate-800/60 px-3 py-2 text-left text-sm text-slate-200 transition-colors hover:border-white/20 hover:bg-slate-800"
+                                        >
+                                            {suggestion}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                         )}
 
                         {messages.map((message) => (
@@ -192,8 +234,7 @@ export function PortfolioChat() {
                                 />
                                 <div className="flex flex-col items-start gap-1.5">
                                     <p className="text-sm leading-relaxed text-red-200">
-                                        {error?.message ??
-                                            "Something went wrong. Please try again."}
+                                        {getDisplayErrorMessage(error)}
                                     </p>
                                     <button
                                         type="button"
@@ -225,7 +266,10 @@ export function PortfolioChat() {
                             placeholder="Ask a question…"
                             aria-label="Ask about Minn"
                             className={cn(
-                                "max-h-24 min-h-9 flex-1 resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-sm text-white wrap-break-word focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                                // text-base (16px) here, not text-sm: any smaller and
+                                // iOS Safari auto-zooms the page in on focus, which is
+                                // jarring inside a small fixed-position panel like this.
+                                "max-h-24 min-h-9 flex-1 resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-base text-white wrap-break-word focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:text-sm",
                                 SCROLLBAR_CLASS
                             )}
                         />

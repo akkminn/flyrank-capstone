@@ -33,13 +33,11 @@ export const portfolioChatTools = {
                 (project) => project.name.toLowerCase() === name.toLowerCase()
             );
 
-            if (!match) {
-                throw new Error(
-                    `No project named "${name}" was found. Known projects: ${PROJECTS.map((project) => project.name).join(", ")}.`
-                );
-            }
-
-            return { projects: [match] };
+            // Not finding a match by name is a normal "no results" outcome,
+            // not a failure — so it renders as the empty state, not the
+            // error state. (A tool failure would be something like the data
+            // source itself being unreachable.)
+            return { projects: match ? [match] : [] };
         },
     }),
 };
