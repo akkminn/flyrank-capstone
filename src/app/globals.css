@@ -94,3 +94,29 @@
     @apply font-sans;
     }
 }
+
+/* AsyncActionButton (FE-AA1): a single misfire ("no" → shake) and a single
+   success pop, each played once per state entry — not looped, not decorative. */
+@keyframes button-shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(5px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(3px); }
+}
+
+@keyframes button-pop {
+    0% { transform: scale(0.6); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+}
+
+/* Lets the /lab/buttons demo simulate `prefers-reduced-motion: reduce` with a
+   checkbox, for reviewers who can't easily flip that OS setting. Mirrors the
+   same reduce-to-near-instant approach the OS setting itself triggers. */
+[data-force-reduced-motion] * {
+    animation-duration: 0.001ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+}
