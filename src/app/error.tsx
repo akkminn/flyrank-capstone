@@ -5,7 +5,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { Alert01Icon } from "@hugeicons/core-free-icons";
 
 import { PageContainer } from "@/components/page-container";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 
 export default function ErrorBoundary({
     error,
@@ -35,14 +35,13 @@ export default function ErrorBoundary({
                     <Button size="sm" onClick={() => reset()}>
                         Try again
                     </Button>
-                    <Button
-                        size="sm"
-                        variant="secondary"
-                        nativeButton={false}
-                        render={<a href="/" />}
-                    >
+                    {/* A real link, not <Button render={<a/>}>: Base UI stamps
+                        role="button" on non-native buttons, which would announce
+                        this navigation as a button. A plain anchor also does a
+                        full page load, which is what you want after a crash. */}
+                    <a href="/" className={buttonVariants({ size: "sm", variant: "secondary" })}>
                         Go home
-                    </Button>
+                    </a>
                 </div>
             </div>
         </PageContainer>

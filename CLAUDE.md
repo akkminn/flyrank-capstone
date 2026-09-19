@@ -35,8 +35,20 @@ Run these from the repo root (npm):
   runs; if it still fails for the same reason, say so rather than assuming it
   passed.
 
-There is no test runner configured on this branch. Do not assume `npm test`
-works; add Vitest and Testing Library first if tests are needed.
+Tests:
+
+- `npm test` — Vitest + React Testing Library (`src/**/*.test.tsx`), jsdom
+- `npm run test:watch` — Vitest in watch mode
+- `npm run test:e2e` — Playwright (`e2e/`); builds and serves the app itself on
+  port 3100, needs a one-time `npx playwright install chromium`
+- `npm run typecheck` — `tsc --noEmit`
+
+Testing conventions: query by role/label/text (never test IDs or CSS classes),
+and never hit the real AI route — `vitest.setup.ts` makes any un-mocked `fetch`
+throw, and tests use `src/test/mock-chat-route.ts` / `src/test/chat-stream.ts`
+to stand in for `/api/portfolio-chat`. Playwright specs mock it with
+`page.route`. CI (`.github/workflows/ci.yml`) runs typecheck, Vitest, the
+build, and Playwright on every push and PR, with no API key.
 
 ## Structure
 
@@ -82,10 +94,12 @@ re-declare page background/text theming per-page.
 
 ## Notes for Claude
 
-- Verify changes against `npm run build` before considering them done; there
-  are no tests to rely on yet, and `npm run lint` doesn't currently run (see
-  Commands). If lint tooling gets fixed, add it back into the verification
-  step.
+- Verify changes with `npm test` and `npm run build` before considering them
+  done (add `npm run test:e2e` when touching the chat flow or routing). If a
+  test fails, read why before touching it — a failing test has already caught
+  real bugs here (see the raw-network-error message and the "Go home" link's
+  role). `npm run lint` still doesn't run (see Commands); if lint tooling gets
+  fixed, add it back into the verification step.
 - For UI changes, start the dev server (`npm run dev`, port 3000) and check
   the page in a browser rather than relying on the build alone.
 - Feature experiments live on separate branches (for example the settings-form

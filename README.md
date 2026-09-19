@@ -11,7 +11,28 @@ npm install   # install dependencies
 npm run dev   # start the dev server (Turbopack, HMR) on :3000
 npm run build # production build, includes type-checking
 npm run start # serve the production build locally
+npm test        # unit & component tests (Vitest + Testing Library)
+npm run test:e2e # end-to-end tests (Playwright; first run: npx playwright install chromium)
 ```
+
+## Testing
+
+- **Component tests** (`src/**/*.test.tsx`) cover the chat widget across its
+  empty, pending, streaming, error and tool-call states, the composer form's
+  validation, the `getProjects` tool-result component (all four lifecycle
+  states), the `AsyncActionButton` state machine, and the route error boundary.
+  They query by role, label and visible text, so restyling a component doesn't
+  break them.
+- **Playwright** (`e2e/`) walks the primary flow in a real browser: open the
+  chat, ask a question, get a reply with a project card, follow it to its page —
+  plus an error-then-retry path.
+- **The AI route is always mocked.** Unit tests stub `fetch` (and any un-mocked
+  call throws); Playwright intercepts the request with `page.route`. Nothing in
+  the suite or CI needs an API key or reaches Gemini.
+- **CI** (`.github/workflows/ci.yml`) runs typecheck, the unit tests, the build
+  and the Playwright suite on every push and pull request. To make failures
+  actually block merging, mark the `unit` and `e2e` jobs as required status
+  checks in the repo's branch protection settings.
 
 ## "Ask about me" AI chat
 

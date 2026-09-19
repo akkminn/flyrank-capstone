@@ -29,9 +29,19 @@ const NETWORK_ERROR_FALLBACK = "Couldn't reach the server. Check your connection
 // HTML error page instead of our stream), useChat's `error.message` ends up
 // being something like a raw HTML document or a browser-internal string like
 // "Failed to fetch". Never render that directly.
+// What each engine's fetch() rejects with when the request never completes:
+// Chrome "Failed to fetch", Safari "Load failed", Firefox "NetworkError when
+// attempting to fetch resource."
+const RAW_NETWORK_ERROR = /^(failed to fetch|load failed|networkerror|network request failed)/i;
+
 function getDisplayErrorMessage(error: Error | undefined): string {
     const message = error?.message?.trim();
-    if (!message || message.length > 200 || /[<>]/.test(message)) {
+    if (
+        !message ||
+        message.length > 200 ||
+        /[<>]/.test(message) ||
+        RAW_NETWORK_ERROR.test(message)
+    ) {
         return NETWORK_ERROR_FALLBACK;
     }
     return message;
