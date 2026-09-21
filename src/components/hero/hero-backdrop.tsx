@@ -133,10 +133,21 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
                         </SceneErrorBoundary>
                     </div>
                 )}
-                {/* Keeps the copy readable wherever a tile drifts behind it: an even
-                    dim on phones, where the copy spans the width, and a spotlight
-                    behind the left-hand copy on wider screens. */}
-                <div className="absolute inset-0 bg-slate-950/55 md:bg-transparent md:bg-[radial-gradient(ellipse_at_30%_50%,rgb(2_6_23/0.85),transparent_75%)]" />
+                {/* Keeps the copy readable wherever a tile drifts behind it. The
+                    numbers are not arbitrary: measured over a full animation cycle,
+                    the brightest tile pixel behind the copy has to stay dark enough
+                    for slate-300 text to keep 4.5:1. Phones dim the whole scene,
+                    since the copy spans the width. From lg up the scrim is a
+                    soft-edged band that follows the text column, so tiles outside
+                    it keep their full brightness and no box edge shows. */}
+                <div className="absolute inset-0 bg-slate-950/75 lg:hidden" />
+                <div
+                    className="absolute inset-y-0 left-1/2 hidden w-[min(100%,64rem)] -translate-x-1/2 lg:block"
+                    style={{
+                        background:
+                            "linear-gradient(to right, transparent, rgb(2 6 23 / 0.8) 4rem, rgb(2 6 23 / 0.8) calc(100% - 12rem), transparent)",
+                    }}
+                />
             </div>
 
             {children}
@@ -158,19 +169,27 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
                             onClick={toggle}
                         >
                             Animation
+                            {/* State is shown by the thumb's position and the track colour,
+                                not by extra words, so the button's visible label ("Animation")
+                                is exactly its accessible name. */}
                             <span
                                 aria-hidden="true"
                                 className={cn(
-                                    "rounded-full px-2 py-0.5 text-xs font-semibold",
-                                    enabled ? "bg-emerald-400/20 text-emerald-300" : "bg-white/10 text-slate-400"
+                                    "relative h-5 w-9 rounded-full transition-colors",
+                                    enabled ? "bg-emerald-400" : "bg-slate-600"
                                 )}
                             >
-                                {enabled ? "On" : "Off"}
+                                <span
+                                    className={cn(
+                                        "absolute top-0.5 left-0.5 size-4 rounded-full bg-slate-950 transition-transform",
+                                        enabled && "translate-x-4"
+                                    )}
+                                />
                             </span>
                         </Button>
                     )}
                     {show3D && ready && (
-                        <p className="text-xs text-slate-500">Move your cursor, or tap, to push them.</p>
+                        <p className="text-xs text-slate-300">Move your cursor, or tap, to push them.</p>
                     )}
                 </div>
             </div>

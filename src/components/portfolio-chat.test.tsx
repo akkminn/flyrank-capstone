@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
 import { PortfolioChat } from "@/components/portfolio-chat";
 import {
@@ -12,10 +12,19 @@ import {
 } from "@/test/chat-stream";
 import { lastUserText, mockChatRoute } from "@/test/mock-chat-route";
 
+// The conversation is a lazy chunk, and its first import (the AI SDK plus the
+// icon package) is slow to transform under parallel test load. Load it once up
+// front so each test waits on behaviour, not on a cold import.
+beforeAll(async () => {
+    await import("@/components/portfolio-chat-conversation");
+}, 60_000);
+
 async function openChat() {
     const user = userEvent.setup();
     render(<PortfolioChat />);
     await user.click(screen.getByRole("button", { name: "Ask about me" }));
+    // The conversation is a lazy chunk, so wait for it to arrive.
+    await screen.findByRole("textbox", { name: "Ask about Minn" });
     return user;
 }
 
@@ -39,7 +48,9 @@ describe("PortfolioChat: opening and the empty state", () => {
         await userEvent.click(screen.getByRole("button", { name: "Ask about me" }));
 
         expect(screen.getByRole("dialog", { name: "Ask about Minn" })).toBeInTheDocument();
-        expect(screen.getByRole("button", { name: "What has Minn built?" })).toBeInTheDocument();
+        expect(
+            await screen.findByRole("button", { name: "What has Minn built?" })
+        ).toBeInTheDocument();
         expect(
             screen.getByRole("button", { name: "What's Minn working on right now?" })
         ).toBeInTheDocument();
@@ -130,7 +141,7 @@ describe("PortfolioChat: pending, streaming and finished states", () => {
         await user.type(composer(), "Hello?");
         await user.click(sendButton());
 
-        expect(await screen.findByLabelText("Assistant is thinking")).toBeInTheDocument();
+        expect(await screen.findByRole("status")).toHaveTextContent("Assistant is thinking.");
         expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
         expect(screen.queryByRole("button", { name: "Send" })).not.toBeInTheDocument();
         expect(screen.getByText("Hello?")).toBeInTheDocument();
@@ -143,7 +154,7 @@ describe("PortfolioChat: pending, streaming and finished states", () => {
 
         await user.type(composer(), "Tell me about Minn");
         await user.click(sendButton());
-        await screen.findByLabelText("Assistant is thinking");
+        expect(await screen.findByRole("status")).toHaveTextContent("Assistant is thinking.");
 
         await act(async () => {
             controlled.push([
@@ -156,7 +167,7 @@ describe("PortfolioChat: pending, streaming and finished states", () => {
 
         expect(await screen.findByText("Minn builds")).toBeInTheDocument();
         await waitFor(() =>
-            expect(screen.queryByLabelText("Assistant is thinking")).not.toBeInTheDocument()
+            expect(screen.getByRole("status")).toHaveTextContent("Assistant is replying.")
         );
         // Still streaming: the reply is partial and can still be stopped.
         expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
@@ -340,5 +351,84 @@ describe("PortfolioChat: tool calls inside a reply", () => {
 
         expect(await screen.findByText("He built StudyBuddy.")).toBeInTheDocument();
         expect(screen.getByRole("link", { name: /StudyBuddy/ })).toBeInTheDocument();
+    });
+});
+
+describe("PortfolioChat: keyboard and screen-reader behaviour", () => {
+    it("moves focus into the composer when opened, and Escape closes it and returns focus to the launcher", async () => {
+        const user = await openChat();
+        expect(composer()).toHaveFocus();
+
+        await user.keyboard("{Escape}");
+
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Ask about me" })).toHaveFocus();
+    });
+
+    it("keeps the conversation when the dialog is closed and reopened", async () => {
+        mockChatRoute(() => sseResponse(textReplyChunks("He built two apps.")));
+        const user = await openChat();
+        await user.type(composer(), "What has Minn built?{Enter}");
+        expect(await screen.findByText("He built two apps.")).toBeInTheDocument();
+
+        await user.keyboard("{Escape}");
+        await user.click(screen.getByRole("button", { name: "Ask about me" }));
+
+        expect(screen.getByText("He built two apps.")).toBeInTheDocument();
+        expect(composer()).toHaveFocus();
+    });
+
+    it("reaches Stop with Tab from the composer and stops with the keyboard, without losing focus", async () => {
+        const controlled = createControlledSseResponse();
+        mockChatRoute(() => controlled.response);
+        const user = await openChat();
+        await user.type(composer(), "Tell me about Minn{Enter}");
+        await screen.findByRole("button", { name: "Stop" });
+
+        await user.tab();
+        expect(screen.getByRole("button", { name: "Stop" })).toHaveFocus();
+
+        await user.keyboard("{Enter}");
+
+        expect(await screen.findByRole("button", { name: "Send" })).toBeInTheDocument();
+        // The button that had focus became a disabled Send; focus must not fall to <body>.
+        expect(composer()).toHaveFocus();
+        expect(screen.getByRole("status")).toHaveTextContent("Stopped.");
+    });
+
+    it("announces the state politely and the finished reply once, not every streamed token", async () => {
+        const controlled = createControlledSseResponse();
+        mockChatRoute(() => controlled.response);
+        const user = await openChat();
+
+        const status = screen.getByRole("status");
+        expect(status).toHaveAttribute("aria-live", "polite");
+        // The message list is a log, but it must not itself announce each token.
+        expect(screen.getByRole("log", { name: "Conversation" })).toHaveAttribute("aria-live", "off");
+
+        await user.type(composer(), "Hello?{Enter}");
+        await waitFor(() => expect(status).toHaveTextContent("Assistant is thinking."));
+
+        await act(async () => {
+            controlled.push([
+                { type: "start" },
+                { type: "start-step" },
+                { type: "text-start", id: "t1" },
+                { type: "text-delta", id: "t1", delta: "Minn builds " },
+            ]);
+        });
+        await waitFor(() => expect(status).toHaveTextContent("Assistant is replying."));
+        expect(status).not.toHaveTextContent("Minn builds");
+
+        await act(async () => {
+            controlled.push([
+                { type: "text-delta", id: "t1", delta: "web apps." },
+                { type: "text-end", id: "t1" },
+                { type: "finish-step" },
+                { type: "finish", finishReason: "stop" },
+            ]);
+            controlled.finish();
+        });
+        await waitFor(() => expect(status).toHaveTextContent("Assistant replied: Minn builds web apps."));
     });
 });

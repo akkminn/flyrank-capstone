@@ -50,6 +50,13 @@ to stand in for `/api/portfolio-chat`. Playwright specs mock it with
 `page.route`. CI (`.github/workflows/ci.yml`) runs typecheck, Vitest, the
 build, and Playwright on every push and PR, with no API key.
 
+`e2e/accessibility.spec.ts` runs axe-core over every route and completes the
+primary flow by keyboard, so add any new route to its `ROUTES` list. The
+chat conversation is a lazy chunk: tests must wait for it (`findBy…`), and
+`portfolio-chat.test.tsx` pre-imports it in `beforeAll` so cold-import time
+doesn't flake the suite. The chat's polite status region repeats the reply
+text (visually hidden), so assert on reply bubbles with `{ exact: true }`.
+
 ## Structure
 
 ```
@@ -61,9 +68,12 @@ flyrank-capstone/
 │   │   ├── page.tsx            # Home
 │   │   ├── about/, contact/, experience/, projects/, projects/studybuddy/
 │   │   ├── health/page.tsx     # Simple status/health route
+│   │   ├── fonts/              # Figtree, loaded via next/font/local (preloaded)
 │   │   └── globals.css         # Tailwind import + design tokens
 │   ├── components/
 │   │   ├── navigation.tsx      # Sticky header, responsive mobile menu
+│   │   ├── portfolio-chat.tsx  # Eager launcher + dialog shell (tiny)
+│   │   ├── portfolio-chat-conversation.tsx  # Lazy chunk: useChat + AI SDK
 │   │   ├── page-container.tsx  # Shared max-width/padding wrapper for pages
 │   │   └── ui/                 # shadcn-style primitives (e.g. button.tsx)
 │   ├── lib/utils.ts            # `cn()` class-merge helper
@@ -87,7 +97,16 @@ re-declare page background/text theming per-page.
   extract subcomponents rather than growing one large function.
 - **Accessibility:** use semantic HTML, associate `<label>` with inputs, give
   images meaningful `alt` (or `alt=""` plus `aria-hidden` for decorative ones),
-  and keep interactions keyboard accessible.
+  and keep interactions keyboard accessible. Focus rings come from the global
+  `:focus-visible` rule and `--ring` (an opaque, high-contrast colour: don't
+  restyle them with low-alpha rings). Text over the hero's moving tiles must
+  keep 4.5:1 against the *brightest* tile pixel, which is why the hero copy
+  is `slate-300` over a scrim (see AUDIT.md); re-measure if you change either.
+- **Performance:** keep heavy client code out of the root layout. The AI SDK
+  is lazy-loaded by the chat launcher and the 3D scene starts static on
+  small screens (under 768 px wide; keyed on width because DevTools'
+  Lighthouse doesn't emulate touch). Re-run Lighthouse (mobile) before and after
+  changes that touch the layout or add dependencies (see AUDIT.md).
 - **Commits:** Conventional Commits (`feat:`, `docs:`, `chore:`). Keep history
   clean and messages scoped.
 - **License:** MIT (© 2026 Aung Ko Ko Minn) — preserve the header in `LICENSE`.

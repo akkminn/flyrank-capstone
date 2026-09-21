@@ -105,6 +105,15 @@ live URL.
   Lighthouse run against the preview deployment.
 - **Tiles that do something:** click a technology to open the projects that use it.
 
+## Accessibility & performance (FE-10)
+
+Lighthouse (mobile) performance is **92–94 on every page** on a quiet machine
+(medians of 3) and about 85–90 on a busy one, with accessibility and best practices at 100;
+the full before/after, method and limits are in
+[AUDIT.md](AUDIT.md). Two decisions worth knowing: the chat's AI SDK is a lazy chunk
+that loads when the launcher is hovered, focused or clicked, and on small screens
+(under 768 px wide) the 3D hero starts static (the Animation switch turns it on).
+
 ## Testing
 
 - **Component tests** (`src/**/*.test.tsx`) cover the chat widget across its
@@ -113,6 +122,9 @@ live URL.
   states), the `AsyncActionButton` state machine, and the route error boundary.
   They query by role, label and visible text, so restyling a component doesn't
   break them.
+- **Accessibility** (`e2e/accessibility.spec.ts`) runs axe-core over every route (plus
+  the open chat and the mobile menu) and completes the primary flow with the
+  keyboard alone, so a regression fails CI.
 - **Playwright** (`e2e/`) walks the primary flow in a real browser: open the
   chat, ask a question, get a reply with a project card, follow it to its page —
   plus an error-then-retry path.

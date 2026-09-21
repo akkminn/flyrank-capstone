@@ -1,0 +1,124 @@
+import AxeBuilder from "@axe-core/playwright";
+import { expect, test, type Page } from "@playwright/test";
+
+import { SSE_HEADERS, sseBody, textReplyChunks } from "../src/test/chat-stream";
+
+const ROUTES = [
+    "/",
+    "/about",
+    "/experience",
+    "/projects",
+    "/projects/studybuddy",
+    "/projects/menuchecker",
+    "/contact",
+    "/lab/buttons",
+    "/health",
+    "/does-not-exist", // the 404 page
+];
+
+// Everything axe can check against WCAG 2.2 AA, plus its best-practice rules.
+async function scan(page: Page) {
+    return new AxeBuilder({ page })
+        .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa", "best-practice"])
+        .analyze();
+}
+
+function summarise(violations: Awaited<ReturnType<typeof scan>>["violations"]) {
+    return violations.map((v) => `${v.id} (${v.nodes.length}): ${v.nodes[0]?.html.slice(0, 100)}`);
+}
+
+// The static hero: no WebGL, so nothing here depends on a GPU or on timing.
+test.describe("axe, no violations", () => {
+    test.use({ reducedMotion: "reduce" });
+
+    for (const route of ROUTES) {
+        test(`${route}`, async ({ page }) => {
+            await page.goto(route);
+            await page.waitForLoadState("networkidle");
+            expect(summarise((await scan(page)).violations)).toEqual([]);
+        });
+    }
+
+    test("/ with the chat dialog open", async ({ page }) => {
+        await page.goto("/");
+        await page.getByRole("button", { name: "Ask about me" }).click();
+        await expect(page.getByRole("textbox", { name: "Ask about Minn" })).toBeFocused();
+        expect(summarise((await scan(page)).violations)).toEqual([]);
+    });
+
+    test("/ on a phone, with the mobile menu open", async ({ page }) => {
+        await page.setViewportSize({ width: 375, height: 812 });
+        await page.goto("/");
+        await page.getByRole("button", { name: "Open menu" }).click();
+        await expect(page.getByRole("navigation", { name: "Primary" })).toBeVisible();
+        expect(summarise((await scan(page)).violations)).toEqual([]);
+    });
+});
+
+test("the live 3D hero has no axe violations either", async ({ page }) => {
+    test.slow(); // software WebGL
+    await page.goto("/");
+    await expect(page.getByText(/to push them/i)).toBeVisible({ timeout: 15_000 });
+    expect(summarise((await scan(page)).violations)).toEqual([]);
+});
+
+// The primary flow, using only the keyboard: skip the nav, open the chat, ask
+// something, stop the reply, and close it again.
+test("the primary flow can be completed with the keyboard alone", async ({ page }) => {
+    // A slow reply, so there is time to reach the Stop button while it is pending.
+    await page.route("**/api/portfolio-chat", async (route) => {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await route.fulfill({
+            status: 200,
+            headers: SSE_HEADERS,
+            body: sseBody(textReplyChunks("Minn built StudyBuddy.")),
+        });
+    });
+    // No animation: this test is about focus order, not the scene.
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.goto("/");
+
+    // 1. The first stop is a skip link, and it works.
+    await page.keyboard.press("Tab");
+    const skip = page.getByRole("link", { name: "Skip to main content" });
+    await expect(skip).toBeFocused();
+    await expect(skip).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page).toHaveURL(/#main$/);
+    await expect(page.locator("main")).toBeFocused();
+
+    // 2. Every focus indicator is a solid, opaque outline (not the old 50%-alpha grey).
+    await page.keyboard.press("Tab");
+    const ring = await page.evaluate(() => {
+        const style = getComputedStyle(document.activeElement as Element);
+        return { style: style.outlineStyle, width: parseFloat(style.outlineWidth), color: style.outlineColor };
+    });
+    expect(ring.style).toBe("solid");
+    expect(ring.width).toBeGreaterThanOrEqual(2);
+    expect(ring.color).not.toMatch(/\/ 0?\.\d/); // no alpha channel
+
+    // 3. Open the chat from the keyboard: focus lands in the composer.
+    const launcher = page.getByRole("button", { name: "Ask about me" });
+    await launcher.focus();
+    await page.keyboard.press("Enter");
+    const composer = page.getByRole("textbox", { name: "Ask about Minn" });
+    await expect(composer).toBeFocused();
+
+    // 4. Ask, then reach Stop with one Tab while the reply is pending.
+    await page.keyboard.type("What has Minn built?");
+    await page.keyboard.press("Enter");
+    await page.keyboard.press("Tab");
+    const stop = page.getByRole("button", { name: "Stop" });
+    await expect(stop).toBeFocused();
+
+    // 5. A polite live region reports progress, and the reply lands.
+    await expect(page.getByRole("status")).toHaveAttribute("aria-live", "polite");
+    const dialog = page.getByRole("dialog", { name: "Ask about Minn" });
+    await expect(dialog.getByText("Minn built StudyBuddy.", { exact: true })).toBeVisible();
+    await expect(page.getByRole("status")).toContainText("Assistant replied: Minn built StudyBuddy.");
+
+    // 6. Escape closes the chat and puts focus back on the launcher.
+    await page.keyboard.press("Escape");
+    await expect(dialog).toBeHidden();
+    await expect(launcher).toBeFocused();
+});

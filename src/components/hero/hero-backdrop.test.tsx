@@ -25,6 +25,7 @@ function stubDevice({
     saveData = false,
     deviceMemory = 8,
     hardwareConcurrency = 8,
+    phone = false,
 } = {}) {
     const listeners = new Set<() => void>();
     const query = {
@@ -32,7 +33,9 @@ function stubDevice({
         addEventListener: (_: string, fn: () => void) => listeners.add(fn),
         removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
     };
-    vi.stubGlobal("matchMedia", () => query);
+    // Only the phone query (a narrow screen) answers to `phone`.
+    const phoneQuery = { matches: phone, addEventListener: () => {}, removeEventListener: () => {} };
+    vi.stubGlobal("matchMedia", (media: string) => (media.includes("max-width") ? phoneQuery : query));
     vi.stubGlobal("navigator", {
         ...navigator,
         connection: { saveData },
@@ -134,6 +137,31 @@ describe("HeroBackdrop", () => {
 
         await user.click(toggle);
         expect(window.localStorage.getItem("hero-animation")).toBe("off");
+    });
+
+    it("starts phones on the static hero, and lets them opt in to the scene", async () => {
+        stubDevice({ phone: true });
+        const user = userEvent.setup();
+        renderHero();
+
+        const toggle = await screen.findByRole("switch", { name: "Animation" });
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        expect(toggle).toHaveAttribute("aria-checked", "false");
+        expect(scene.loads).toBe(0); // the 3D code is not even requested
+
+        await user.click(toggle);
+
+        expect(await screen.findByText("Scene running")).toBeInTheDocument();
+        expect(window.localStorage.getItem("hero-animation")).toBe("on");
+    });
+
+    it("honours a phone visitor's saved choice to have the animation on", async () => {
+        stubDevice({ phone: true });
+        window.localStorage.setItem("hero-animation", "on");
+        renderHero();
+
+        expect(await screen.findByText("Scene running")).toBeInTheDocument();
+        expect(screen.getByRole("switch", { name: "Animation" })).toHaveAttribute("aria-checked", "true");
     });
 
     it("still works for the visit when storage is blocked", async () => {

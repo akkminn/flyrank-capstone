@@ -56,7 +56,7 @@ test("a visitor asks about Minn's projects and follows a result to its page", as
 
     // The reply streams in as text plus a rendered project card, not raw JSON.
     const dialog = page.getByRole("dialog", { name: "Ask about Minn" });
-    await expect(dialog.getByText("He built StudyBuddy, an AI study platform.")).toBeVisible();
+    await expect(dialog.getByText("He built StudyBuddy, an AI study platform.", { exact: true })).toBeVisible();
     const card = dialog.getByRole("link", { name: /StudyBuddy/ });
     await expect(card).toHaveAttribute("href", "/projects/studybuddy");
 
@@ -94,7 +94,7 @@ test("a failed reply shows a recoverable error, and retrying gets the answer", a
 
     await page.getByRole("button", { name: "Try again" }).click();
 
-    await expect(page.getByText("Minn studies ICT at Rangsit University.")).toBeVisible();
+    await expect(page.getByText("Minn studies ICT at Rangsit University.", { exact: true })).toBeVisible();
     await expect(chatAlert).toHaveCount(0);
     expect(requests).toHaveLength(2);
 });

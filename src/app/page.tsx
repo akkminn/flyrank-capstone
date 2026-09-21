@@ -9,7 +9,7 @@ export default function HomePage() {
     return (
         <HeroBackdrop>
             <PageContainer className="flex w-full flex-1 flex-col justify-center py-16">
-                <p className="mb-4 text-sm text-slate-400">Developer Portfolio</p>
+                <p className="mb-4 text-sm text-slate-300">Developer Portfolio</p>
 
                 <h1 className="text-4xl font-bold tracking-tight">
                     Aung Ko Ko Minn
@@ -31,7 +31,7 @@ export default function HomePage() {
 
                 <ul
                     aria-label="Tech stack"
-                    className="mt-10 flex max-w-xl flex-wrap gap-x-4 gap-y-1 text-sm text-slate-400"
+                    className="mt-10 flex max-w-xl flex-wrap gap-x-4 gap-y-1 text-sm text-slate-300"
                 >
                     {TECH.map((tech) => (
                         <li key={tech.id}>{tech.name}</li>
