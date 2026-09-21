@@ -17,7 +17,6 @@
     "@ai-sdk/google": "^4.0.64",
     "@ai-sdk/react": "^4.0.96",
     "@base-ui/react": "^1.7.0",
-    "@fontsource-variable/figtree": "^5.3.0",
     "@hugeicons/core-free-icons": "^4.2.3",
     "@hugeicons/react": "^1.1.9",
     "@react-three/fiber": "^9.7.0",
@@ -38,6 +37,7 @@
     "zod": "^4.5.4"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.63.0",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",

@@ -1,298 +1,139 @@
 "use client";
 
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from "react";
-import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import {
+    Component,
+    lazy,
+    Suspense,
+    useRef,
+    useState,
+    type KeyboardEvent,
+    type ReactNode,
+} from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Alert01Icon, Cancel01Icon, MessageQuestionIcon } from "@hugeicons/core-free-icons";
+import { Cancel01Icon, MessageQuestionIcon } from "@hugeicons/core-free-icons";
 
-import { Button } from "@/components/ui/button";
-import { ProjectsToolPart } from "@/components/projects-tool-part";
-import type { PortfolioUIMessage } from "@/lib/ai/tools";
-import { cn } from "@/lib/utils";
+// The conversation (and with it the AI SDK) is the heaviest thing on every
+// page and most visitors never open it, so it is a separate chunk that loads
+// on demand. `loadConversation` is also called on hover/focus/touch of the
+// launcher to warm it up, so opening still feels instant.
+const loadConversation = () =>
+    import("@/components/portfolio-chat-conversation").then((module) => ({
+        default: module.ChatConversation,
+    }));
+const ChatConversation = lazy(loadConversation);
 
-const SUGGESTIONS = [
-    "What has Minn built?",
-    "What's Minn working on right now?",
-    "What's this site built with?",
-];
+// If the chunk can't be downloaded (offline, a stale deploy), say so inside the
+// dialog instead of letting the error take down the whole page.
+class ConversationLoadBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
+    state = { failed: false };
 
-const SCROLLBAR_CLASS =
-    "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb:hover]:bg-white/25";
-
-const NETWORK_ERROR_FALLBACK = "Couldn't reach the server. Check your connection and try again.";
-
-// The server-side route always sends a short, clean sentence as the error
-// message (see toFriendlyErrorMessage in the route handler) — but a true
-// network failure never reaches that code at all. If the request fails
-// before getting a response (offline, DNS failure, a proxy/CDN returning an
-// HTML error page instead of our stream), useChat's `error.message` ends up
-// being something like a raw HTML document or a browser-internal string like
-// "Failed to fetch". Never render that directly.
-// What each engine's fetch() rejects with when the request never completes:
-// Chrome "Failed to fetch", Safari "Load failed", Firefox "NetworkError when
-// attempting to fetch resource."
-const RAW_NETWORK_ERROR = /^(failed to fetch|load failed|networkerror|network request failed)/i;
-
-function getDisplayErrorMessage(error: Error | undefined): string {
-    const message = error?.message?.trim();
-    if (
-        !message ||
-        message.length > 200 ||
-        /[<>]/.test(message) ||
-        RAW_NETWORK_ERROR.test(message)
-    ) {
-        return NETWORK_ERROR_FALLBACK;
+    static getDerivedStateFromError() {
+        return { failed: true };
     }
-    return message;
+
+    render() {
+        if (!this.state.failed) return this.props.children;
+        return (
+            <div role="alert" className="flex-1 space-y-2 px-4 py-4 text-sm text-red-200">
+                <p>Couldn&apos;t load the chat. Check your connection and try again.</p>
+                <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="text-xs font-semibold text-red-100 underline underline-offset-2 hover:text-white"
+                >
+                    Reload the page
+                </button>
+            </div>
+        );
+    }
 }
 
 // Floating "Ask about me" widget, mounted once in the root layout so it's
 // available on every route rather than scoped to a single page.
 export function PortfolioChat() {
     const [isOpen, setIsOpen] = useState(false);
-    const [input, setInput] = useState("");
-    const { messages, sendMessage, status, stop, error } = useChat<PortfolioUIMessage>({
-        transport: new DefaultChatTransport({ api: "/api/portfolio-chat" }),
-    });
+    // Once opened, the conversation stays mounted (just hidden), so closing the
+    // dialog doesn't throw the visitor's chat history away.
+    const [hasOpened, setHasOpened] = useState(false);
+    const launcherRef = useRef<HTMLButtonElement>(null);
 
-    const scrollRef = useRef<HTMLDivElement>(null);
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    // Only auto-scroll to new content while the user is already near the
-    // bottom, so scrolling up to reread earlier messages isn't yanked away.
-    const stickToBottomRef = useRef(true);
-
-    function handleScroll() {
-        const el = scrollRef.current;
-        if (!el) return;
-        const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-        stickToBottomRef.current = distanceFromBottom < 80;
+    function open() {
+        setHasOpened(true);
+        setIsOpen(true);
     }
 
-    useEffect(() => {
-        if (isOpen && stickToBottomRef.current) {
-            scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
+    // Closing from inside the dialog (Escape, the X) would otherwise leave focus
+    // on an element that just disappeared; return it to the button that opened it.
+    function close() {
+        setIsOpen(false);
+        launcherRef.current?.focus();
+    }
+
+    function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+        if (event.key === "Escape") {
+            event.stopPropagation();
+            close();
         }
-    }, [messages, isOpen]);
-
-    const isBusy = status === "submitted" || status === "streaming";
-
-    function submitMessage() {
-        const text = input.trim();
-        if (!text || isBusy) return;
-        sendMessage({ text });
-        setInput("");
-        stickToBottomRef.current = true;
-        if (textareaRef.current) textareaRef.current.style.height = "auto";
-    }
-
-    function handleSubmit(event: FormEvent<HTMLFormElement>) {
-        event.preventDefault();
-        submitMessage();
-    }
-
-    function handleKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
-        if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            submitMessage();
-        }
-    }
-
-    function retryLastMessage() {
-        const lastUserMessage = [...messages].reverse().find((message) => message.role === "user");
-        const text = lastUserMessage?.parts.find((part) => part.type === "text")?.text;
-        if (text) sendMessage({ text });
-    }
-
-    function askSuggestion(text: string) {
-        if (isBusy) return;
-        sendMessage({ text });
-        stickToBottomRef.current = true;
     }
 
     return (
         <>
             <button
+                ref={launcherRef}
                 type="button"
-                onClick={() => setIsOpen((open) => !open)}
+                onClick={() => (isOpen ? close() : open())}
+                onPointerEnter={loadConversation}
+                onFocus={loadConversation}
+                onTouchStart={loadConversation}
                 aria-expanded={isOpen}
                 aria-controls="portfolio-chat-panel"
                 className="fixed right-5 bottom-5 z-50 flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-lg shadow-black/30 transition-transform hover:scale-105"
             >
-                <HugeiconsIcon icon={isOpen ? Cancel01Icon : MessageQuestionIcon} size={18} />
+                <HugeiconsIcon
+                    icon={isOpen ? Cancel01Icon : MessageQuestionIcon}
+                    size={18}
+                    aria-hidden="true"
+                />
                 {isOpen ? "Close" : "Ask about me"}
             </button>
 
-            {isOpen && (
+            {hasOpened && (
                 <div
                     id="portfolio-chat-panel"
                     role="dialog"
                     aria-label="Ask about Minn"
+                    hidden={!isOpen}
+                    onKeyDown={handleDialogKeyDown}
                     className="fixed right-5 bottom-20 z-50 flex h-[70dvh] max-h-140 w-95 max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-900 shadow-2xl shadow-black/40"
                 >
                     <div className="flex items-center justify-between border-b border-white/10 px-4 py-3">
                         <div>
                             <p className="text-sm font-semibold text-white">Ask about me</p>
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-slate-300">
                                 Ask about Minn&apos;s background, skills, or this site.
                             </p>
                         </div>
                         <button
                             type="button"
-                            onClick={() => setIsOpen(false)}
+                            onClick={close}
                             aria-label="Close chat"
-                            className="rounded-md p-1 text-slate-400 transition-colors hover:text-white"
+                            className="rounded-md p-1 text-slate-300 transition-colors hover:text-white"
                         >
-                            <HugeiconsIcon icon={Cancel01Icon} size={18} />
+                            <HugeiconsIcon icon={Cancel01Icon} size={18} aria-hidden="true" />
                         </button>
                     </div>
 
-                    <div
-                        ref={scrollRef}
-                        onScroll={handleScroll}
-                        aria-live="polite"
-                        className={cn(
-                            "flex-1 space-y-3 overflow-y-auto px-4 py-4",
-                            SCROLLBAR_CLASS
-                        )}
-                    >
-                        {messages.length === 0 && (
-                            <div className="flex flex-col gap-3">
-                                <p className="text-sm text-slate-400">
-                                    Ask me anything about Minn — or try one of these:
+                    <ConversationLoadBoundary>
+                        <Suspense
+                            fallback={
+                                <p role="status" className="flex-1 px-4 py-4 text-sm text-slate-300">
+                                    Loading chat…
                                 </p>
-                                <div className="flex flex-col items-start gap-2">
-                                    {SUGGESTIONS.map((suggestion) => (
-                                        <button
-                                            key={suggestion}
-                                            type="button"
-                                            onClick={() => askSuggestion(suggestion)}
-                                            className="rounded-xl border border-white/10 bg-slate-800/60 px-3 py-2 text-left text-sm text-slate-200 transition-colors hover:border-white/20 hover:bg-slate-800"
-                                        >
-                                            {suggestion}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {messages.map((message) => (
-                            <div key={message.id} className="flex flex-col gap-2">
-                                {message.parts.map((part, index) => {
-                                    if (part.type === "text") {
-                                        return (
-                                            <div
-                                                key={index}
-                                                className={cn(
-                                                    "flex",
-                                                    message.role === "user"
-                                                        ? "justify-end"
-                                                        : "justify-start"
-                                                )}
-                                            >
-                                                <div
-                                                    className={cn(
-                                                        "max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed whitespace-pre-wrap wrap-break-word",
-                                                        message.role === "user"
-                                                            ? "bg-white text-slate-900"
-                                                            : "bg-slate-800 text-slate-100"
-                                                    )}
-                                                >
-                                                    {part.text}
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-
-                                    if (part.type === "tool-getProjects") {
-                                        return (
-                                            <div key={index} className="flex justify-start">
-                                                <div className="w-full max-w-[85%]">
-                                                    <ProjectsToolPart part={part} />
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-
-                                    return null;
-                                })}
-                            </div>
-                        ))}
-
-                        {status === "submitted" && (
-                            <div className="flex justify-start">
-                                <div
-                                    className="flex items-center gap-1 rounded-2xl bg-slate-800 px-4 py-3"
-                                    aria-label="Assistant is thinking"
-                                >
-                                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.3s]" />
-                                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400 [animation-delay:-0.15s]" />
-                                    <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-slate-400" />
-                                </div>
-                            </div>
-                        )}
-
-                        {status === "error" && (
-                            <div
-                                role="alert"
-                                className="flex items-start gap-2.5 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3"
-                            >
-                                <HugeiconsIcon
-                                    icon={Alert01Icon}
-                                    size={18}
-                                    className="mt-0.5 shrink-0 text-red-300"
-                                />
-                                <div className="flex flex-col items-start gap-1.5">
-                                    <p className="text-sm leading-relaxed text-red-200">
-                                        {getDisplayErrorMessage(error)}
-                                    </p>
-                                    <button
-                                        type="button"
-                                        onClick={retryLastMessage}
-                                        className="text-xs font-semibold text-red-100 underline underline-offset-2 hover:text-white"
-                                    >
-                                        Try again
-                                    </button>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-
-                    <form
-                        onSubmit={handleSubmit}
-                        className="flex items-end gap-2 border-t border-white/10 p-3"
-                    >
-                        <textarea
-                            ref={textareaRef}
-                            value={input}
-                            onChange={(event) => {
-                                setInput(event.target.value);
-                                const el = event.target;
-                                el.style.height = "auto";
-                                el.style.height = `${Math.min(el.scrollHeight, 96)}px`;
-                            }}
-                            onKeyDown={handleKeyDown}
-                            rows={1}
-                            placeholder="Ask a question…"
-                            aria-label="Ask about Minn"
-                            className={cn(
-                                // text-base (16px) here, not text-sm: any smaller and
-                                // iOS Safari auto-zooms the page in on focus, which is
-                                // jarring inside a small fixed-position panel like this.
-                                "max-h-24 min-h-9 flex-1 resize-none rounded-xl border border-white/10 bg-slate-950 px-3 py-1.5 text-base text-white wrap-break-word focus:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:text-sm",
-                                SCROLLBAR_CLASS
-                            )}
-                        />
-                        {isBusy ? (
-                            <Button type="button" size="sm" variant="secondary" onClick={() => stop()}>
-                                Stop
-                            </Button>
-                        ) : (
-                            <Button type="submit" size="sm" disabled={!input.trim()}>
-                                Send
-                            </Button>
-                        )}
-                    </form>
+                            }
+                        >
+                            <ChatConversation isOpen={isOpen} />
+                        </Suspense>
+                    </ConversationLoadBoundary>
                 </div>
             )}
         </>

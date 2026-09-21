@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Cancel01Icon, Menu01Icon } from "@hugeicons/core-free-icons";
 
@@ -19,9 +19,22 @@ const NAV_LINKS = [
 export function Navigation() {
     const pathname = usePathname();
     const [isOpen, setIsOpen] = useState(false);
+    const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+    // Escape closes the mobile menu and hands focus back to the button that
+    // opened it, rather than leaving it on a link that just disappeared.
+    function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
+        if (event.key === "Escape" && isOpen) {
+            setIsOpen(false);
+            menuButtonRef.current?.focus();
+        }
+    }
 
     return (
-        <header className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur">
+        <header
+            onKeyDown={handleKeyDown}
+            className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur"
+        >
             <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
                 <Link
                     href="/"
@@ -51,6 +64,7 @@ export function Navigation() {
                 </nav>
 
                 <button
+                    ref={menuButtonRef}
                     type="button"
                     className="inline-flex items-center justify-center rounded-md p-2 text-slate-300 transition-colors hover:text-white md:hidden"
                     aria-expanded={isOpen}
@@ -58,7 +72,7 @@ export function Navigation() {
                     aria-label={isOpen ? "Close menu" : "Open menu"}
                     onClick={() => setIsOpen((open) => !open)}
                 >
-                    <HugeiconsIcon icon={isOpen ? Cancel01Icon : Menu01Icon} size={22} />
+                    <HugeiconsIcon icon={isOpen ? Cancel01Icon : Menu01Icon} size={22} aria-hidden="true" />
                 </button>
             </div>
 

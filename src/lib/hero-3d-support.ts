@@ -5,6 +5,17 @@ type NavigatorHints = Navigator & {
 
 export const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
+// A phone-sized screen. The scene costs roughly 0.4-0.8 s of main-thread blocking
+// on a mid-range phone (measured under Lighthouse's mobile throttling), so these
+// visitors start on the static hero and can switch the animation on. Tablets and
+// desktops get it automatically.
+//
+// This keys on width alone, not on a coarse pointer, deliberately: Chrome
+// DevTools' Lighthouse panel emulates a phone's width but not its touch input,
+// so a pointer-based rule would never fire there (measured: it left the scene
+// on and Home at 77).
+const PHONE_QUERY = "(max-width: 767px)";
+
 // Devices at or below these numbers get the static hero. Both are Chromium
 // hints (Safari/Firefox report neither), so they only ever *remove* the 3D
 // scene for known-weak devices; everyone else falls through to the normal path.
@@ -45,13 +56,18 @@ const ANIMATION_PREF_KEY = "hero-animation";
 
 // The visitor's own on/off choice for the hero animation. Remembered so it
 // survives navigating away and back; storage can be blocked (private windows,
-// site data off), in which case the default is simply "on" and nothing throws.
+// site data off), in which case the default applies and nothing throws. With
+// no saved choice the default is "on", except on phones (see PHONE_QUERY).
 export function readAnimationPref(): boolean {
+    let saved: string | null = null;
     try {
-        return window.localStorage.getItem(ANIMATION_PREF_KEY) !== "off";
+        saved = window.localStorage.getItem(ANIMATION_PREF_KEY);
     } catch {
-        return true;
+        // fall through to the default
     }
+    if (saved === "on") return true;
+    if (saved === "off") return false;
+    return !window.matchMedia?.(PHONE_QUERY).matches;
 }
 
 export function writeAnimationPref(on: boolean) {
