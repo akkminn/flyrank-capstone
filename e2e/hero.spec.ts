@@ -1,7 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
 
-import { TECH } from "../src/components/hero/hero-config";
-
 // Headless Chromium renders WebGL in software, so a live, animating scene is
 // CPU-heavy. Running these one at a time keeps each page fast enough that the
 // assertions measure the app rather than a starved worker.
@@ -9,7 +7,7 @@ test.describe.configure({ mode: "serial" });
 
 const pushHint = (page: Page) => page.getByText(/to push them/i);
 
-test("the hero lists the tech stack and renders a live scene that can be switched off and on", async ({ page }) => {
+test("the hero renders a live scene that can be switched off and on", async ({ page }) => {
     test.slow(); // software WebGL plus several full-hero screenshots
 
     // three logs "THREE.<Thing>: ..." for deprecations and misuse; none should appear.
@@ -21,7 +19,6 @@ test("the hero lists the tech stack and renders a live scene that can be switche
     await page.goto("/");
 
     await expect(page.getByRole("heading", { name: "Aung Ko Ko Minn" })).toBeVisible();
-    await expect(page.getByRole("list", { name: "Tech stack" }).getByRole("listitem")).toHaveCount(TECH.length);
 
     await expect(pushHint(page)).toBeVisible({ timeout: 15_000 });
     await expect(page.locator("canvas")).toHaveCount(1);

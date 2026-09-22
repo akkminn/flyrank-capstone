@@ -1,7 +1,6 @@
 import Link from "next/link";
 
 import { HeroBackdrop } from "@/components/hero/hero-backdrop";
-import { TECH } from "@/components/hero/hero-config";
 import { OpenTerminalButton } from "@/components/open-terminal-button";
 import { PageContainer } from "@/components/page-container";
 import { buttonVariants } from "@/components/ui/button";
