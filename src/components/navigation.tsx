@@ -21,8 +21,6 @@ export function Navigation() {
     const [isOpen, setIsOpen] = useState(false);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-    // Escape closes the mobile menu and hands focus back to the button that
-    // opened it, rather than leaving it on a link that just disappeared.
     function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
         if (event.key === "Escape" && isOpen) {
             setIsOpen(false);
@@ -35,7 +33,7 @@ export function Navigation() {
             onKeyDown={handleKeyDown}
             className="sticky top-0 z-50 border-b border-white/10 bg-slate-950/80 backdrop-blur"
         >
-            <div className="mx-auto flex max-w-4xl items-center justify-between px-6 py-4">
+            <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-4">
                 <Link
                     href="/"
                     className="text-sm font-semibold tracking-tight text-white"
@@ -80,7 +78,7 @@ export function Navigation() {
                 <nav
                     id="mobile-nav"
                     aria-label="Primary"
-                    className="border-t border-white/10 px-6 py-4 md:hidden"
+                    className="border-t border-white/10 px-4 py-4 md:hidden"
                 >
                     <ul className="flex flex-col gap-4">
                         {NAV_LINKS.map((link) => {

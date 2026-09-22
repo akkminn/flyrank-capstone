@@ -7,7 +7,6 @@ import { TECH } from "../src/components/hero/hero-config";
 // assertions measure the app rather than a starved worker.
 test.describe.configure({ mode: "serial" });
 
-// The caption only appears once the live scene is up.
 const pushHint = (page: Page) => page.getByText(/to push them/i);
 
 test("the hero lists the tech stack and renders a live scene that can be switched off and on", async ({ page }) => {
@@ -24,12 +23,9 @@ test("the hero lists the tech stack and renders a live scene that can be switche
     await expect(page.getByRole("heading", { name: "Aung Ko Ko Minn" })).toBeVisible();
     await expect(page.getByRole("list", { name: "Tech stack" }).getByRole("listitem")).toHaveCount(TECH.length);
 
-    // The static tiles paint first; the scene swaps in once the browser is idle.
     await expect(pushHint(page)).toBeVisible({ timeout: 15_000 });
     await expect(page.locator("canvas")).toHaveCount(1);
 
-    // The scene must actually be drawing and moving: a mounted-but-blank or
-    // frozen canvas would give two identical frames a second apart.
     const hero = page.locator("section").first();
     const secondApart = async () => {
         const first = await hero.screenshot();
@@ -65,7 +61,6 @@ test("the hero lists the tech stack and renders a live scene that can be switche
 });
 
 test("animation turned off is remembered, and the 3D code is never downloaded", async ({ page }) => {
-    // Every script the page pulls in; the 3D chunk is the one that contains the renderer.
     const scriptBodies: Promise<string>[] = [];
     page.on("response", (response) => {
         if (response.url().endsWith(".js")) scriptBodies.push(response.text().catch(() => ""));

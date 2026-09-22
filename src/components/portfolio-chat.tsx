@@ -48,12 +48,8 @@ class ConversationLoadBoundary extends Component<{ children: ReactNode }, { fail
     }
 }
 
-// Floating "Ask about me" widget, mounted once in the root layout so it's
-// available on every route rather than scoped to a single page.
 export function PortfolioChat() {
     const [isOpen, setIsOpen] = useState(false);
-    // Once opened, the conversation stays mounted (just hidden), so closing the
-    // dialog doesn't throw the visitor's chat history away.
     const [hasOpened, setHasOpened] = useState(false);
     const launcherRef = useRef<HTMLButtonElement>(null);
 
@@ -62,8 +58,6 @@ export function PortfolioChat() {
         setIsOpen(true);
     }
 
-    // Closing from inside the dialog (Escape, the X) would otherwise leave focus
-    // on an element that just disappeared; return it to the button that opened it.
     function close() {
         setIsOpen(false);
         launcherRef.current?.focus();
@@ -87,7 +81,7 @@ export function PortfolioChat() {
                 onTouchStart={loadConversation}
                 aria-expanded={isOpen}
                 aria-controls="portfolio-chat-panel"
-                className="fixed right-5 bottom-5 z-50 flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-lg shadow-black/30 transition-transform hover:scale-105"
+                className="flex shrink-0 items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-medium text-slate-900 shadow-lg shadow-black/30 transition-transform hover:scale-105"
             >
                 <HugeiconsIcon
                     icon={isOpen ? Cancel01Icon : MessageQuestionIcon}

@@ -1,12 +1,10 @@
-// Kept in one place so the `getProjects` tool and the Projects pages stay
-// honest and in sync — only real, currently-listed work, nothing invented.
 export type Project = {
     id: string;
     name: string;
     summary: string;
     stack: string[];
     status: "concept" | "live";
-    href: string; // internal project detail page
+    href: string;
     liveHref?: string;
     githubHref?: string;
 };

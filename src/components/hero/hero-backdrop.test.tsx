@@ -33,7 +33,6 @@ function stubDevice({
         addEventListener: (_: string, fn: () => void) => listeners.add(fn),
         removeEventListener: (_: string, fn: () => void) => listeners.delete(fn),
     };
-    // Only the phone query (a narrow screen) answers to `phone`.
     const phoneQuery = { matches: phone, addEventListener: () => {}, removeEventListener: () => {} };
     vi.stubGlobal("matchMedia", (media: string) => (media.includes("max-width") ? phoneQuery : query));
     vi.stubGlobal("navigator", {
@@ -57,8 +56,6 @@ const renderHero = () =>
         </HeroBackdrop>
     );
 
-// The caption only appears once the live scene is up, so it doubles as the
-// user-visible signal that 3D is running.
 const pushHint = () => screen.queryByText(/to push them/i);
 
 beforeEach(() => {
@@ -101,8 +98,7 @@ describe("HeroBackdrop", () => {
 
         await user.click(toggle);
 
-        // Off unmounts the scene entirely (that is what frees the GPU), and the
-        // "push them" hint no longer applies.
+        // Off unmounts the scene entirely — that is what frees the GPU.
         expect(toggle).toHaveAttribute("aria-checked", "false");
         expect(screen.queryByText(/Scene (running|paused)/)).not.toBeInTheDocument();
         expect(pushHint()).not.toBeInTheDocument();
@@ -113,7 +109,7 @@ describe("HeroBackdrop", () => {
 
         expect(toggle).toHaveAttribute("aria-checked", "true");
         expect(await screen.findByText("Scene running")).toBeInTheDocument();
-        expect(scene.loads).toBeGreaterThan(loadsWhileOn); // a fresh scene, not a resumed one
+        expect(scene.loads).toBeGreaterThan(loadsWhileOn);
         expect(await screen.findByText(/to push them/i)).toBeInTheDocument();
     });
 
@@ -147,7 +143,7 @@ describe("HeroBackdrop", () => {
         const toggle = await screen.findByRole("switch", { name: "Animation" });
         await new Promise((resolve) => setTimeout(resolve, 400));
         expect(toggle).toHaveAttribute("aria-checked", "false");
-        expect(scene.loads).toBe(0); // the 3D code is not even requested
+        expect(scene.loads).toBe(0);
 
         await user.click(toggle);
 

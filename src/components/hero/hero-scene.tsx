@@ -12,12 +12,10 @@ const TILE_COUNT = { desktop: 24, phone: 14 };
 const PHONE_MAX_WIDTH = 640;
 const DEPTH_RANGE = [-5, 2] as const;
 
-// A block is a square with rounded corners and a little thickness.
 const BLOCK_THICKNESS = 0.14;
 const CORNER_RADIUS = 0.2;
 
-// Cursor / touch interaction: nearby tiles are shoved away, then spring back.
-const PUSH_RADIUS = 1.6; 
+const PUSH_RADIUS = 1.6;
 const PUSH_FORCE = 45;
 const SPRING = 6;
 const DAMPING = 3;
@@ -27,24 +25,22 @@ type Tile = {
     slot: number;
     z: number;
     size: number;
-    nx: number; // -1..1 across the visible width at this depth
-    progress: number; // 0 = top of screen, 1 = bottom
-    speed: number; // world units per second
+    nx: number;
+    progress: number;
+    speed: number;
     swayAmp: number;
     swayFreq: number;
     phase: number;
-    tiltAmp: number; // how far the tile rocks toward / away from the viewer
+    tiltAmp: number;
     tiltFreq: number;
-    turn: number; // current rotation in the tile's own plane
-    spin: number; // how fast it turns there, rad/s
-    // Displacement from the cursor push, and its velocity.
+    turn: number;
+    spin: number;
     ox: number;
     oy: number;
     ovx: number;
     ovy: number;
 };
 
-// Seeded so the layout is the same on every visit (and in tests).
 function mulberry32(seed: number) {
     return () => {
         seed = (seed + 0x6d2b79f5) | 0;
@@ -54,14 +50,12 @@ function mulberry32(seed: number) {
     };
 }
 
-// Tiles cycle through the technology list, so a small count shows the first
-// technologies and a larger one wraps around to give some of them a second tile.
 function createTiles(count: number, rand: () => number): Tile[] {
     const tiles: Tile[] = [];
     for (let i = 0; i < count; i++) {
         tiles.push({
             tech: i % TECH.length,
-            slot: Math.floor(i / TECH.length), // index within that technology's mesh
+            slot: Math.floor(i / TECH.length),
             z: MathUtils.lerp(DEPTH_RANGE[0], DEPTH_RANGE[1], rand()),
             size: 0.28 + rand() * 0.22,
             nx: rand() * 2 - 1,
@@ -109,8 +103,6 @@ function createBlockGeometry() {
     return geometry;
 }
 
-// The face of one technology's block: its colour with the logo centred, drawn
-// once into an in-memory canvas.
 function createTexture({ bg, fg, icon }: Tech) {
     const size = 128;
     const canvas = document.createElement("canvas");
@@ -148,8 +140,6 @@ function usePointer(element: HTMLElement) {
             pointer.current.active = true;
             window.clearTimeout(releaseTimer);
         };
-        // A tap is only a few frames long, so let it finish pushing before the
-        // touch is treated as gone. A mouse stays "active" while it hovers.
         const release = (event: PointerEvent) => {
             if (event.pointerType === "mouse") return;
             releaseTimer = window.setTimeout(() => (pointer.current.active = false), 150);
@@ -180,7 +170,6 @@ function Snow({ count }: { count: number }) {
 
     const rand = useMemo(() => mulberry32(2026), []);
     const tiles = useMemo(() => createTiles(count, rand), [count, rand]);
-    // How many tiles each technology got; technologies with none aren't drawn.
     const perTech = useMemo(() => TECH.map((_, i) => tiles.filter((tile) => tile.tech === i).length), [tiles]);
     const geometry = useMemo(createBlockGeometry, []);
     // One [face, edge] pair per shown technology, matching the geometry's two groups.
@@ -224,7 +213,6 @@ function Snow({ count }: { count: number }) {
         const damping = Math.exp(-DAMPING * dt);
 
         for (const tile of tiles) {
-            // Farther tiles cover more world per screen pixel, so scale by depth.
             const depth = (CAMERA_Z - tile.z) / CAMERA_Z;
             const halfW = (width / 2) * depth;
             const halfH = (height / 2) * depth;
@@ -255,8 +243,6 @@ function Snow({ count }: { count: number }) {
             tile.ox += tile.ovx * dt;
             tile.oy += tile.ovy * dt;
 
-            // Rock gently toward / away from the viewer while turning slowly in
-            // place, so the logo stays readable instead of flipping edge-on.
             tile.turn += tile.spin * dt;
             const tiltX = Math.sin(time * tile.tiltFreq + tile.phase) * tile.tiltAmp;
             const tiltY = Math.cos(time * tile.tiltFreq * 0.8 + tile.phase * 1.3) * tile.tiltAmp;
@@ -295,7 +281,6 @@ function Snow({ count }: { count: number }) {
 }
 
 export type HeroSceneProps = {
-    /** False while the hero is scrolled off-screen: stops the render loop. */
     active: boolean;
     onReady?: () => void;
 };
@@ -315,7 +300,6 @@ export default function HeroScene({ active, onReady }: HeroSceneProps) {
             gl={{ alpha: true, antialias: true, powerPreference: "low-power" }}
             onCreated={onReady}
         >
-            {/* Far blocks fade into the page background instead of competing with the text. */}
             <fog attach="fog" args={["#020617", 9, 19]} />
             {/* Two cheap lights: the ambient keeps every face readable, the
                 directional one shades the edges so the thickness shows. */}

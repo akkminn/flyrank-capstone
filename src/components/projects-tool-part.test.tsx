@@ -95,7 +95,6 @@ describe("ProjectsToolPart", () => {
             "href",
             "/projects"
         );
-        // A miss is a normal outcome, not a failure.
         expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     });
 

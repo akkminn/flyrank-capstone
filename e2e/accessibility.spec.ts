@@ -13,7 +13,7 @@ const ROUTES = [
     "/contact",
     "/lab/buttons",
     "/health",
-    "/does-not-exist", // the 404 page
+    "/does-not-exist",
 ];
 
 // Everything axe can check against WCAG 2.2 AA, plus its best-practice rules.
@@ -46,6 +46,16 @@ test.describe("axe, no violations", () => {
         expect(summarise((await scan(page)).violations)).toEqual([]);
     });
 
+    test("/ with the terminal open and a command run", async ({ page }) => {
+        await page.goto("/");
+        await page.getByRole("button", { name: "Try the terminal" }).click();
+        await expect(page.getByRole("textbox", { name: "Terminal command" })).toBeFocused();
+        await page.keyboard.type("help");
+        await page.keyboard.press("Enter");
+        await expect(page.getByRole("log", { name: "Terminal output" })).toContainText("whoami");
+        expect(summarise((await scan(page)).violations)).toEqual([]);
+    });
+
     test("/ on a phone, with the mobile menu open", async ({ page }) => {
         await page.setViewportSize({ width: 375, height: 812 });
         await page.goto("/");
@@ -62,10 +72,7 @@ test("the live 3D hero has no axe violations either", async ({ page }) => {
     expect(summarise((await scan(page)).violations)).toEqual([]);
 });
 
-// The primary flow, using only the keyboard: skip the nav, open the chat, ask
-// something, stop the reply, and close it again.
 test("the primary flow can be completed with the keyboard alone", async ({ page }) => {
-    // A slow reply, so there is time to reach the Stop button while it is pending.
     await page.route("**/api/portfolio-chat", async (route) => {
         await new Promise((resolve) => setTimeout(resolve, 1500));
         await route.fulfill({
@@ -74,11 +81,9 @@ test("the primary flow can be completed with the keyboard alone", async ({ page 
             body: sseBody(textReplyChunks("Minn built StudyBuddy.")),
         });
     });
-    // No animation: this test is about focus order, not the scene.
     await page.emulateMedia({ reducedMotion: "reduce" });
     await page.goto("/");
 
-    // 1. The first stop is a skip link, and it works.
     await page.keyboard.press("Tab");
     const skip = page.getByRole("link", { name: "Skip to main content" });
     await expect(skip).toBeFocused();
@@ -87,7 +92,6 @@ test("the primary flow can be completed with the keyboard alone", async ({ page 
     await expect(page).toHaveURL(/#main$/);
     await expect(page.locator("main")).toBeFocused();
 
-    // 2. Every focus indicator is a solid, opaque outline (not the old 50%-alpha grey).
     await page.keyboard.press("Tab");
     const ring = await page.evaluate(() => {
         const style = getComputedStyle(document.activeElement as Element);
@@ -95,29 +99,25 @@ test("the primary flow can be completed with the keyboard alone", async ({ page 
     });
     expect(ring.style).toBe("solid");
     expect(ring.width).toBeGreaterThanOrEqual(2);
-    expect(ring.color).not.toMatch(/\/ 0?\.\d/); // no alpha channel
+    expect(ring.color).not.toMatch(/\/ 0?\.\d/);
 
-    // 3. Open the chat from the keyboard: focus lands in the composer.
     const launcher = page.getByRole("button", { name: "Ask about me" });
     await launcher.focus();
     await page.keyboard.press("Enter");
     const composer = page.getByRole("textbox", { name: "Ask about Minn" });
     await expect(composer).toBeFocused();
 
-    // 4. Ask, then reach Stop with one Tab while the reply is pending.
     await page.keyboard.type("What has Minn built?");
     await page.keyboard.press("Enter");
     await page.keyboard.press("Tab");
     const stop = page.getByRole("button", { name: "Stop" });
     await expect(stop).toBeFocused();
 
-    // 5. A polite live region reports progress, and the reply lands.
     await expect(page.getByRole("status")).toHaveAttribute("aria-live", "polite");
     const dialog = page.getByRole("dialog", { name: "Ask about Minn" });
     await expect(dialog.getByText("Minn built StudyBuddy.", { exact: true })).toBeVisible();
     await expect(page.getByRole("status")).toContainText("Assistant replied: Minn built StudyBuddy.");
 
-    // 6. Escape closes the chat and puts focus back on the launcher.
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     await expect(launcher).toBeFocused();

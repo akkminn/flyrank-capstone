@@ -2,7 +2,6 @@ import { cn } from "@/lib/utils";
 
 import { TECH } from "./hero-config";
 
-// A frozen snapshot of the falling tiles: the first dozen technologies, fixed positions.
 // Pure HTML/SVG/CSS, so it costs no JavaScript and can be server-rendered.
 const TILES = [
     { tech: 0, left: 78, top: 14, size: 44, turn: 12 },
@@ -19,11 +18,6 @@ const TILES = [
     { tech: 11, left: 45, top: 92, size: 32, turn: -16 },
 ];
 
-/**
- * Static stand-in for the 3D scene: the loading placeholder, the
- * reduced-motion / low-power version, and the fallback when WebGL fails. It
- * fills the same box as the canvas, so nothing shifts when the scene arrives.
- */
 export function HeroFallback({ className }: { className?: string }) {
     return (
         <div className={cn("absolute inset-0 overflow-hidden", className)}>

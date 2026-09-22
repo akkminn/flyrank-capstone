@@ -63,7 +63,7 @@ export function readAnimationPref(): boolean {
     try {
         saved = window.localStorage.getItem(ANIMATION_PREF_KEY);
     } catch {
-        // fall through to the default
+        // localStorage can throw in a private window or with site data blocked.
     }
     if (saved === "on") return true;
     if (saved === "off") return false;
@@ -74,6 +74,6 @@ export function writeAnimationPref(on: boolean) {
     try {
         window.localStorage.setItem(ANIMATION_PREF_KEY, on ? "on" : "off");
     } catch {
-        // Not remembered this time; the switch still works for this visit.
+        // localStorage can throw in a private window or with site data blocked.
     }
 }

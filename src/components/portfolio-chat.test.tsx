@@ -67,7 +67,6 @@ describe("PortfolioChat: opening and the empty state", () => {
 
         expect(await screen.findByText("He built two apps.")).toBeInTheDocument();
         expect(lastUserText(fetchMock)).toBe("What has Minn built?");
-        // The empty state gives way to the conversation.
         expect(screen.queryByText(/or try one of these/)).not.toBeInTheDocument();
     });
 
@@ -169,7 +168,6 @@ describe("PortfolioChat: pending, streaming and finished states", () => {
         await waitFor(() =>
             expect(screen.getByRole("status")).toHaveTextContent("Assistant is replying.")
         );
-        // Still streaming: the reply is partial and can still be stopped.
         expect(screen.getByRole("button", { name: "Stop" })).toBeInTheDocument();
 
         await act(async () => {
@@ -391,7 +389,6 @@ describe("PortfolioChat: keyboard and screen-reader behaviour", () => {
         await user.keyboard("{Enter}");
 
         expect(await screen.findByRole("button", { name: "Send" })).toBeInTheDocument();
-        // The button that had focus became a disabled Send; focus must not fall to <body>.
         expect(composer()).toHaveFocus();
         expect(screen.getByRole("status")).toHaveTextContent("Stopped.");
     });
@@ -403,7 +400,6 @@ describe("PortfolioChat: keyboard and screen-reader behaviour", () => {
 
         const status = screen.getByRole("status");
         expect(status).toHaveAttribute("aria-live", "polite");
-        // The message list is a log, but it must not itself announce each token.
         expect(screen.getByRole("log", { name: "Conversation" })).toHaveAttribute("aria-live", "off");
 
         await user.type(composer(), "Hello?{Enter}");

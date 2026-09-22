@@ -14,7 +14,6 @@ export function mockChatRoute(
     return fetchMock;
 }
 
-/** The parsed JSON body of the Nth request the mocked route received. */
 export function sentBody(fetchMock: ReturnType<typeof mockChatRoute>, call = 0) {
     const init = (fetchMock.mock.calls[call] as unknown as [string, RequestInit])[1];
     return JSON.parse(init.body as string) as {
@@ -22,7 +21,6 @@ export function sentBody(fetchMock: ReturnType<typeof mockChatRoute>, call = 0) 
     };
 }
 
-/** Text of the last user message the client sent in the Nth request. */
 export function lastUserText(fetchMock: ReturnType<typeof mockChatRoute>, call = 0) {
     const messages = sentBody(fetchMock, call).messages;
     const last = [...messages].reverse().find((message) => message.role === "user");

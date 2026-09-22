@@ -29,7 +29,6 @@ export type Tech = {
     fg: string;
 };
 
-// Relative luminance (WCAG): 0 = black, 1 = white.
 function luminance(hex: string) {
     const [r, g, b] = [0, 2, 4].map((i) => {
         const channel = parseInt(hex.slice(i, i + 2), 16) / 255;
@@ -38,12 +37,9 @@ function luminance(hex: string) {
     return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-const PAGE_DARK = 0.05; // brand colours darker than this vanish against the page
-const LIGHT_BRAND = 0.3; // brand colours lighter than this need a dark logo
+const PAGE_DARK = 0.05;
+const LIGHT_BRAND = 0.3;
 
-// Tile in the brand colour with a logo that stays readable on it. A brand
-// colour too dark to see on the page (Next.js is pure black) flips: a light
-// tile carrying the logo in its brand colour.
 function toTech(id: string, { title, hex, path }: { title: string; hex: string; path: string }, name = title): Tech {
     const brightness = luminance(hex);
     if (brightness < PAGE_DARK) return { id, name, icon: path, bg: "#f5f5f5", fg: `#${hex}` };

@@ -19,10 +19,6 @@ export default function ButtonLabPage() {
     const [disabled, setDisabled] = useState(false);
     const [simulateReducedMotion, setSimulateReducedMotion] = useState(false);
 
-    // Stands in for a real request (an API call, a save, a send) — resolves
-    // or rejects after a short delay depending on the forced-outcome control
-    // above, so success and error are both reachable on demand rather than
-    // left to a 1-in-5 chance.
     async function runSimulatedAction() {
         const delay = 700 + Math.random() * 900;
         await new Promise<void>((resolve, reject) => {

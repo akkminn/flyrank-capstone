@@ -3,8 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AsyncActionButton } from "@/components/ui/async-action-button";
 
-// The button's accessible name *is* its state, so these read state through the
-// same role/name a screen-reader user would get.
 const idle = { name: "Send" };
 const loading = { name: "Send, working…" };
 const success = { name: "Sent" };
@@ -87,7 +85,6 @@ describe("AsyncActionButton", () => {
         await settle(() => request.reject(new Error("nope")));
 
         expect(screen.getByRole("button", failed)).toBeEnabled();
-        // An error waits for the visitor; it must not quietly revert itself.
         await settle(() => {}, 10_000);
         expect(screen.getByRole("button", failed)).toBeInTheDocument();
     });
@@ -138,7 +135,6 @@ describe("AsyncActionButton", () => {
         click(success);
         expect(screen.getByRole("button", loading)).toBeInTheDocument();
 
-        // The first run's pending revert-to-idle must not fire mid-request.
         await settle(() => {}, 5000);
         expect(screen.getByRole("button", loading)).toBeInTheDocument();
 
@@ -154,5 +150,26 @@ describe("AsyncActionButton", () => {
 
         expect(screen.getByRole("button", idle)).toBeDisabled();
         expect(onActivate).not.toHaveBeenCalled();
+    });
+
+    it("shows the idle icon, and runs the same state machine in the subtle variant", async () => {
+        render(
+            <AsyncActionButton
+                idleLabel="Copy"
+                successLabel="Copied!"
+                errorLabel="Retry"
+                variant="subtle"
+                idleIcon={<svg data-testid="idle-icon" />}
+                onActivate={() => Promise.resolve()}
+            />
+        );
+
+        const idleIcon = screen.getByTestId("idle-icon");
+        expect(idleIcon.closest('[aria-hidden]')).toHaveAttribute("aria-hidden", "false");
+
+        await settle(() => fireEvent.click(screen.getByRole("button", { name: "Copy" })));
+
+        expect(screen.getByRole("button", { name: "Copied!" })).toBeInTheDocument();
+        expect(idleIcon.closest('[aria-hidden]')).toHaveAttribute("aria-hidden", "true");
     });
 });
