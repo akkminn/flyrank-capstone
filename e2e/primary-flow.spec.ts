@@ -19,8 +19,6 @@ const studyBuddy = {
     href: "/projects/studybuddy",
 };
 
-// Stands in for the Gemini-backed route. Returns the request bodies it saw so
-// a test can assert on what the browser actually sent.
 async function mockChatRoute(page: Page, replies: string[]) {
     const requests: { messages: { role: string; parts: { text?: string }[] }[] }[] = [];
     let call = 0;
@@ -54,18 +52,16 @@ test("a visitor asks about Minn's projects and follows a result to its page", as
 
     await askAboutMe(page, "What has Minn built?");
 
-    // The reply streams in as text plus a rendered project card, not raw JSON.
     const dialog = page.getByRole("dialog", { name: "Ask about Minn" });
     await expect(dialog.getByText("He built StudyBuddy, an AI study platform.", { exact: true })).toBeVisible();
     const card = dialog.getByRole("link", { name: /StudyBuddy/ });
     await expect(card).toHaveAttribute("href", "/projects/studybuddy");
 
-    // The browser sent the visitor's question, verbatim, to the chat route.
     expect(requests).toHaveLength(1);
     expect(requests[0].messages.at(-1)?.parts[0].text).toBe("What has Minn built?");
 
-    // Following the card is a client-side navigation, so the conversation
-    // stays open on the destination page.
+    // Following the card is a Next.js client-side navigation, so the
+    // conversation stays open on the destination page.
     await card.click();
     await expect(page).toHaveURL(/\/projects\/studybuddy$/);
     await expect(page.getByRole("heading", { name: "StudyBuddy", level: 1 })).toBeVisible();

@@ -27,7 +27,6 @@ const SUGGESTIONS = [
 const SCROLLBAR_CLASS =
     "[scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-white/15 [&::-webkit-scrollbar-thumb:hover]:bg-white/25";
 
-// Long enough for a screen reader to read a full reply before the region is emptied.
 const ANNOUNCEMENT_LIFETIME_MS = 15_000;
 
 const NETWORK_ERROR_FALLBACK = "Couldn't reach the server. Check your connection and try again.";
@@ -82,8 +81,6 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const actionRef = useRef<HTMLButtonElement>(null);
-    // Only auto-scroll to new content while the user is already near the
-    // bottom, so scrolling up to reread earlier messages isn't yanked away.
     const stickToBottomRef = useRef(true);
 
     function handleScroll() {
@@ -99,18 +96,12 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
         }
     }, [messages, isOpen]);
 
-    // Opening the dialog moves focus to the composer, so a keyboard or
-    // screen-reader user lands where they can type instead of staying on the
-    // launcher behind it. (This also runs when the lazy chunk first mounts.)
     useEffect(() => {
         if (isOpen) textareaRef.current?.focus();
     }, [isOpen]);
 
     const isBusy = status === "submitted" || status === "streaming";
 
-    // What a screen reader hears, in one polite status region. Announcing each
-    // streamed token would be a wall of chatter, so it hears "thinking",
-    // "replying", then the finished reply once.
     const [announcement, setAnnouncement] = useState("");
     const previousStatus = useRef(status);
     const stoppedByUser = useRef(false);
@@ -123,7 +114,7 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
         previousStatus.current = status;
         if (status === "submitted") setAnnouncement("Assistant is thinking.");
         else if (status === "streaming") setAnnouncement("Assistant is replying.");
-        else if (status === "error") setAnnouncement(""); // the alert below speaks for itself
+        else if (status === "error") setAnnouncement("");
         else if (status === "ready" && (previous === "submitted" || previous === "streaming")) {
             const text = lastAssistantText(latestMessages.current);
             setAnnouncement(
@@ -137,18 +128,12 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
         }
     }, [status]);
 
-    // Once spoken, an announcement is just stale text in the page (and a
-    // duplicate of the reply for anyone browsing with a virtual cursor), so clear it.
     useEffect(() => {
         if (!announcement) return;
         const timer = setTimeout(() => setAnnouncement(""), ANNOUNCEMENT_LIFETIME_MS);
         return () => clearTimeout(timer);
     }, [announcement]);
 
-    // The Send/Stop button is one element that changes role, so it survives the
-    // switch. But when a reply ends while focus is on Stop and the composer is
-    // empty, the button becomes disabled Send — and focus would be dropped on
-    // <body>. Hand it to the composer instead.
     useLayoutEffect(() => {
         if (!isBusy && !input.trim() && document.activeElement === actionRef.current) {
             textareaRef.current?.focus();
@@ -195,7 +180,6 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
 
     return (
         <>
-            {/* Screen-reader-only: see the comment on `announcement` above. */}
             <div role="status" aria-live="polite" className="sr-only">
                 {announcement}
             </div>
@@ -271,7 +255,6 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
 
                 {status === "submitted" && (
                     <div className="flex justify-start">
-                        {/* Decorative: the status region above says "thinking". */}
                         <div
                             aria-hidden="true"
                             className="flex items-center gap-1 rounded-2xl bg-slate-800 px-4 py-3"
@@ -332,8 +315,6 @@ export function ChatConversation({ isOpen }: { isOpen: boolean }) {
                         SCROLLBAR_CLASS
                     )}
                 />
-                {/* One element for both jobs, so it (and keyboard focus on it) survives
-                    the switch: "Stop" while a reply is coming, "Send" otherwise. */}
                 <Button
                     ref={actionRef}
                     type="submit"

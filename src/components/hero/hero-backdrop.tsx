@@ -36,17 +36,6 @@ class SceneErrorBoundary extends Component<
     }
 }
 
-/**
- * Full-height hero section: the falling-tiles scene sits behind `children`
- * (the hero copy), which is always rendered so the page never waits on 3D.
- *
- * Two separate questions decide whether the scene runs:
- *   - `capable`: can this device / visitor take it at all (reduced motion,
- *     data-saver, weak hardware)? If not, there is no scene and no switch.
- *   - `enabled`: does the visitor want it? Off means the scene is torn down
- *     completely (WebGL context and GPU memory released, nothing rendering)
- *     and the 3D code is never downloaded.
- */
 export function HeroBackdrop({ children }: { children: ReactNode }) {
     // `null` is what the server and the first client render show, so hydration
     // always matches; the effect below then fills these in.
@@ -64,16 +53,12 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
             cancelIdle();
             const ok = canRender3D();
             setCapable(ok);
-            // Wait for an idle moment so loading the scene never competes with
-            // hydration or the first paint.
             if (ok) cancelIdle = whenIdle(() => setIdle(true));
             else setIdle(false);
         };
 
-        setEnabled(readAnimationPref()); // once: later changes come from the switch
+        setEnabled(readAnimationPref());
         check();
-        // Follow the OS setting live: turning reduced motion on swaps the scene
-        // for the static tiles without a reload.
         const query = window.matchMedia?.(REDUCED_MOTION_QUERY);
         query?.addEventListener("change", check);
         return () => {
@@ -82,7 +67,6 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
         };
     }, []);
 
-    // Stop rendering while the hero is scrolled out of view.
     useEffect(() => {
         const element = section.current;
         if (!element || typeof IntersectionObserver === "undefined") return;
@@ -98,7 +82,6 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
         const next = !enabled;
         setEnabled(next);
         writeAnimationPref(next);
-        // The scene is about to unmount (or mount fresh), so it isn't ready either way.
         setReady(false);
     };
 
@@ -107,10 +90,7 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
             ref={section}
             className="relative isolate flex min-h-[calc(100svh-4rem)] flex-col overflow-hidden"
         >
-            {/* Decorative only: the tech stack is also listed as real text in the copy. */}
             <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10">
-                {/* Fades out once the scene is ready, but snaps straight back when the
-                    scene goes away, so switching the animation off never leaves a blank gap. */}
                 <HeroFallback
                     className={cn(show3D && ready && "opacity-0 transition-opacity duration-700")}
                 />
@@ -133,16 +113,9 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
                         </SceneErrorBoundary>
                     </div>
                 )}
-                {/* Keeps the copy readable wherever a tile drifts behind it. The
-                    numbers are not arbitrary: measured over a full animation cycle,
-                    the brightest tile pixel behind the copy has to stay dark enough
-                    for slate-300 text to keep 4.5:1. Phones dim the whole scene,
-                    since the copy spans the width. From lg up the scrim is a
-                    soft-edged band that follows the text column, so tiles outside
-                    it keep their full brightness and no box edge shows. */}
                 <div className="absolute inset-0 bg-slate-950/75 lg:hidden" />
                 <div
-                    className="absolute inset-y-0 left-1/2 hidden w-[min(100%,64rem)] -translate-x-1/2 lg:block"
+                    className="absolute inset-y-0 left-1/2 hidden w-[min(100%,72rem)] -translate-x-1/2 lg:block"
                     style={{
                         background:
                             "linear-gradient(to right, transparent, rgb(2 6 23 / 0.8) 4rem, rgb(2 6 23 / 0.8) calc(100% - 12rem), transparent)",
@@ -152,10 +125,7 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
 
             {children}
 
-            {/* Space is always reserved, so the copy doesn't shift when the
-                controls appear. The bottom padding also clears the floating
-                "Ask about me" button on phones. */}
-            <div className="mx-auto w-full max-w-4xl px-6 pb-20 md:pb-8">
+            <div className="mx-auto w-full max-w-5xl px-4 pb-20 md:pb-8">
                 <div className="flex min-h-18 flex-wrap items-center gap-x-4 gap-y-2 sm:min-h-11">
                     {showSwitch && (
                         <Button
@@ -169,9 +139,6 @@ export function HeroBackdrop({ children }: { children: ReactNode }) {
                             onClick={toggle}
                         >
                             Animation
-                            {/* State is shown by the thumb's position and the track colour,
-                                not by extra words, so the button's visible label ("Animation")
-                                is exactly its accessible name. */}
                             <span
                                 aria-hidden="true"
                                 className={cn(

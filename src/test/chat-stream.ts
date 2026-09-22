@@ -32,17 +32,14 @@ function textPart(id: string, text: string): UiStreamChunk[] {
     ];
 }
 
-/** A complete, successful reply that is just text. */
 export function textReplyChunks(text: string): UiStreamChunk[] {
     return [...streamStart, ...textPart("text-1", text), ...streamEnd];
 }
 
-/** The route reporting a failure in-band, as toFriendlyErrorMessage does. */
 export function errorReplyChunks(message: string): UiStreamChunk[] {
     return [{ type: "start" }, { type: "error", errorText: message }];
 }
 
-/** A reply where the model calls getProjects, gets `output`, then comments. */
 export function projectsReplyChunks(
     input: { name?: string },
     output: { projects: unknown[] },
@@ -64,10 +61,6 @@ export function sseResponse(chunks: UiStreamChunk[]): Response {
     return new Response(sseBody(chunks), { status: 200, headers: SSE_HEADERS });
 }
 
-/**
- * A response whose body stays open until the test decides otherwise, so a
- * test can assert what the UI shows *between* chunks (pending, mid-stream).
- */
 export function createControlledSseResponse() {
     const encoder = new TextEncoder();
     let controller!: ReadableStreamDefaultController<Uint8Array>;
@@ -94,7 +87,7 @@ export function createControlledSseResponse() {
                 try {
                     controller.error(new DOMException("Aborted", "AbortError"));
                 } catch {
-                    // Body already closed — nothing left to abort.
+                    // A closed ReadableStreamDefaultController throws on error().
                 }
             });
         },

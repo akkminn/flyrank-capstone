@@ -5,14 +5,46 @@ import {
     createUIMessageStreamResponse,
     stepCountIs,
     streamText,
-    type UIMessage,
 } from "ai";
 
 import { portfolioChatModels, portfolioChatSystemPrompt } from "@/lib/ai/config";
 import { portfolioChatTools } from "@/lib/ai/tools";
+import { validateChatRequest } from "@/lib/ai/validate-chat-request";
+import { createRateLimiter } from "@/lib/rate-limit";
 
 // Allow streaming responses up to 30 seconds instead of Vercel's default 10s.
 export const maxDuration = 30;
+
+// In-memory and per-instance, which is a real limitation on a multi-instance
+// serverless deployment (each instance counts separately, and a cold start
+// forgets everything) — but this is a portfolio widget with a free-tier
+// Gemini quota behind it, not a public API, so the goal is just to stop one
+// script or one bored visitor from hammering it and starving other visitors,
+// not to defend against a distributed attacker. A real shared-quota API
+// would swap this for an Upstash/Redis-backed limiter instead.
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX_REQUESTS = 8;
+const rateLimiter = createRateLimiter({
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    maxRequests: RATE_LIMIT_MAX_REQUESTS,
+});
+
+function getClientIp(req: Request): string {
+    // `x-forwarded-for` is a comma-separated hop chain where each proxy
+    // appends its own observed remote address to the end; a client calling
+    // this route directly can freely set (or prepend to) this header itself.
+    // Vercel's edge is always the last hop before this function runs, so the
+    // LAST entry is the one it appended and the client can't forge — the
+    // first entry is exactly the attacker-controlled value a spoofed header
+    // would occupy, so we can't key the rate limiter off of it.
+    const forwardedFor = req.headers.get("x-forwarded-for");
+    const ip = forwardedFor
+        ?.split(",")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .pop();
+    return ip || "unknown";
+}
 
 // This one `onError` handles both top-level stream failures (rate limits,
 // provider outages — SDK-generated `AISDKError`s) and our own tools'
@@ -29,8 +61,19 @@ function toFriendlyErrorMessage(error: unknown): string {
 }
 
 export async function POST(req: Request) {
-    const { messages }: { messages: UIMessage[] } = await req.json();
-    const modelMessages = await convertToModelMessages(messages);
+    if (!rateLimiter.check(getClientIp(req))) {
+        return new Response("You're sending messages a bit fast. Please wait a moment and try again.", {
+            status: 429,
+            headers: { "Retry-After": String(RATE_LIMIT_WINDOW_MS / 1000) },
+        });
+    }
+
+    const validation = validateChatRequest(await req.json());
+    if (!validation.ok) {
+        return new Response(validation.error, { status: 400 });
+    }
+
+    const modelMessages = await convertToModelMessages(validation.messages);
 
     let lastError: unknown;
 
@@ -79,8 +122,6 @@ export async function POST(req: Request) {
 
         if (failed) continue;
 
-        // Covers the rare case where a model passes the peek above (it
-        // started responding) but then fails partway through the stream.
         return result.toUIMessageStreamResponse({ onError: toFriendlyErrorMessage });
     }
 

@@ -20,9 +20,6 @@ export const portfolioChatTools = {
                 ),
         }),
         execute: async ({ name }) => {
-            // Simulates realistic data-fetch latency so the tool's loading
-            // state is actually visible in the UI, instead of resolving
-            // instantly every time.
             await delay(600);
 
             if (!name) {

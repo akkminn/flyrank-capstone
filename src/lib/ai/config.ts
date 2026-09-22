@@ -47,8 +47,9 @@ from memory, it's a summary, and the tool is the source of truth):
 Languages: Burmese (native), English (fluent), Mandarin (learning).
 Interests: coding, teaching, chess, UI/UX design.
 
-Contact: the Contact page lists an email address and a GitHub profile (github.com/akkminn) — point
-people there rather than reciting the email inline, unless they specifically ask for it.
+Contact: the Contact page lists an email address, a GitHub profile (github.com/akkminn), and a
+LinkedIn profile — point people there rather than reciting the email inline, unless they
+specifically ask for it.
 
 About this site:
 - This is a personal developer portfolio, built as the capstone project for the
