@@ -11,7 +11,7 @@ import { openTerminal } from "@/lib/terminal-events";
 
 const EMAIL = "maungkokominn@gmail.com";
 const GITHUB_HANDLE = "akkminn";
-const LINKEDIN_URL = "https://www.linkedin.com/in/aung-ko-ko-minn-b283b4214";
+const LINKEDIN_URL = "https://www.linkedin.com/in/akkminn";
 
 export default function ContactPage() {
     const [name, setName] = useState("");
