@@ -82,7 +82,7 @@ const COMMANDS: Record<string, Command> = {
             output(
                 "email     maungkokominn@gmail.com",
                 "github    github.com/akkminn",
-                "linkedin  linkedin.com/in/aung-ko-ko-minn-b283b4214",
+                "linkedin  linkedin.com/in/akkminn",
                 "",
                 'Run "cd contact" for the contact page.'
             ),
