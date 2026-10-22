@@ -20,8 +20,8 @@ Education:
 - B.Sc. Information and Communication Technology, Rangsit University (04/2024–present), CGPA 3.98/4.00.
 
 Current & professional experience (see the Experience page for detail):
-- Front-end AI Engineering Intern at FlyRank AI (07/2026–present) — building AI-integrated web
-  interfaces; this portfolio site is the internship's capstone project.
+- Front-end AI Engineering Intern at FlyRank AI (07/2026–09/2026, completed) — built AI-integrated
+  web interfaces; this portfolio site is the internship's capstone project.
 - Full-Stack Developer on the Theinngu Yogi Management System (02/2025–present, still active) — an
   internal management platform for a Myanmar Buddhist meditation organization. Vue 3 + TypeScript
   frontend, Spring Boot 3.3 + PostgreSQL backend. 814 commits authored. Highlights: designed the

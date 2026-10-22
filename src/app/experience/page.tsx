@@ -26,14 +26,13 @@ const ROLES: Role[] = [
     {
         title: "Front-end AI Engineering Intern",
         org: "FlyRank AI",
-        dates: "07/2026 – Present",
+        dates: "07/2026 – 09/2026",
         location: "Remote",
-        active: true,
         icon: Briefcase01Icon,
         summary:
-            "Building AI-integrated, high-performance web interfaces on a front-end track focused on shipping production-quality generative-AI product experiences.",
+            "Built AI-integrated, high-performance web interfaces on a front-end track focused on shipping production-quality generative-AI product experiences.",
         bullets: [
-            "Capstone: architecting and deploying this portfolio site, incorporating AI-assisted development workflows end to end — environment setup, Git hygiene, and building with Claude Code.",
+            "Capstone: architected and deployed this portfolio site, incorporating AI-assisted development workflows end to end — environment setup, Git hygiene, and building with Claude Code.",
         ],
         stack: ["Next.js", "React", "TypeScript", "Tailwind CSS"],
     },
