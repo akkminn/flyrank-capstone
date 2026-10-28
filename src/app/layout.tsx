@@ -4,6 +4,7 @@ import "./globals.css";
 import { Navigation } from "@/components/navigation";
 import { PortfolioChat } from "@/components/portfolio-chat";
 import { PortfolioTerminal } from "@/components/portfolio-terminal";
+import { Analytics } from "@vercel/analytics/next";
 
 const figtree = localFont({
     src: "./fonts/figtree-latin-wght-normal.woff2",
@@ -55,6 +56,7 @@ export default function RootLayout({
             <PortfolioTerminal />
             <PortfolioChat />
         </div>
+        <Analytics />
         </body>
         </html>
     );
