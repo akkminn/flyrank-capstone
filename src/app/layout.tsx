@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Navigation } from "@/components/navigation";
 import { PortfolioChat } from "@/components/portfolio-chat";
@@ -55,6 +56,7 @@ export default function RootLayout({
             <PortfolioTerminal />
             <PortfolioChat />
         </div>
+        <Analytics />
         </body>
         </html>
     );

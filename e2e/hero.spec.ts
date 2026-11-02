@@ -35,9 +35,25 @@ test("the hero renders a live scene that can be switched off and on", async ({ p
     // the static tiles; on brings a live scene back.
     const animation = page.getByRole("switch", { name: "Animation" });
     await expect(animation).toHaveAttribute("aria-checked", "true");
+
+    // Keep a handle on the first canvas so its GL context can be inspected after
+    // React has removed it from the page.
+    const liveCanvas = await page.locator("canvas").elementHandle();
+    const contextLost = () =>
+        liveCanvas!.evaluate((canvas: HTMLCanvasElement) => {
+            const gl = canvas.getContext("webgl2") ?? canvas.getContext("webgl");
+            return gl ? gl.isContextLost() : null;
+        });
+    expect(await contextLost()).toBe(false);
+
     await animation.click();
     await expect(animation).toHaveAttribute("aria-checked", "false");
     await expect(page.locator("canvas")).toHaveCount(0);
+    // Switching off releases the GPU context on purpose; check the context
+    // itself rather than three's "Context Lost" log. Both the log and the moment
+    // the context reports as lost depend on timing that differs between Chromium
+    // builds, so poll instead of asserting at one instant.
+    await expect.poll(contextLost, { timeout: 5_000 }).toBe(true);
     await expect(pushHint(page)).toHaveCount(0);
     await page.waitForTimeout(500);
     expect(await secondApart()).toBe(true);
@@ -49,12 +65,9 @@ test("the hero renders a live scene that can be switched off and on", async ({ p
     await page.waitForTimeout(500);
     expect(await secondApart()).toBe(false);
 
-    // Switching off releases the GPU context on purpose, and three logs that as
-    // "Context Lost" — proof the teardown really happened. Anything else from
-    // three (deprecations, misuse) is a problem.
-    const contextLost = "THREE.WebGLRenderer: Context Lost.";
-    expect(threeWarnings).toContain(contextLost);
-    expect(threeWarnings.filter((warning) => warning !== contextLost)).toEqual([]);
+    // three logs "Context Lost" when it sees the release; that message is fine,
+    // but anything else from three (deprecations, misuse) is a problem.
+    expect(threeWarnings.filter((warning) => warning !== "THREE.WebGLRenderer: Context Lost.")).toEqual([]);
 });
 
 test("animation turned off is remembered, and the 3D code is never downloaded", async ({ page }) => {
